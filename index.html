@@ -1,0 +1,2696 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vektorrechnung Zusammenfassung</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- MathJax für LaTeX Formeln -->
+    <script>
+        MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <!-- Custom Theme Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        mocha: {
+                            900: '#3e3127',
+                            800: '#524336',
+                            700: '#6e5a4a',
+                            600: '#8c7662',
+                            500: '#ab927b',
+                        },
+                        creme: {
+                            100: '#fdfbf7',
+                            200: '#f3ece3',
+                            300: '#e3d6c8',
+                        },
+                        gold: {
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #6e5a4a; /* mocha-700 */
+            color: #fdfbf7; /* creme-100 */
+        }
+        
+        .sidebar-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .sidebar-scroll::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+            border-radius: 4px;
+        }
+        .sidebar-scroll::-webkit-scrollbar-thumb {
+            background: #8c7662;
+            border-radius: 4px;
+        }
+        
+        .animation-fade-in {
+            animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .math-box {
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 0.5rem;
+        }
+
+        /* Canvas Base Styles */
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="flex flex-col md:flex-row h-screen w-full overflow-hidden">
+
+    <nav class="w-full md:w-80 h-1/3 md:h-screen bg-mocha-900 border-b md:border-b-0 md:border-r border-mocha-600 flex flex-col z-20 shadow-xl">
+        <div class="p-6 border-b border-mocha-600 bg-mocha-900/50">
+            <h1 class="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-gold-400 to-amber-200">
+                Vektorgeometrie
+            </h1>
+            <p class="text-creme-300 text-sm mt-2 font-medium">Abitur Zusammenfassung</p>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto sidebar-scroll p-4 space-y-1.5" id="nav-container">
+            <!-- Navigationspunkte werden via JS geladen -->
+        </div>
+    <!-- rechtliches --><style>.erik-recht{font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;text-align:center;padding:18px 12px 22px;opacity:.75}.erik-recht a{color:inherit}@media print{.erik-recht{display:none}}</style><footer class="erik-recht"><a href="https://erikdahlmann.github.io/impressum.html">Impressum</a> · <a href="https://erikdahlmann.github.io/datenschutz.html">Datenschutz</a></footer><!-- /rechtliches --></nav>
+
+    <main class="flex-1 h-2/3 md:h-screen overflow-y-auto p-6 md:p-12 relative bg-mocha-700" id="main-content">
+        <!-- Inhalte werden hier injiziert -->
+    </main>
+
+    <script>
+        // Globale Hilfsfunktion zum Zeichnen von Vektorpfeilen in Canvas
+        function drawVecLabel(ctx, prefix, vecName, suffix, x, y, color) {
+            ctx.fillStyle = color;
+            ctx.strokeStyle = color;
+            ctx.font = 'bold 16px sans-serif';
+            ctx.lineWidth = 1.5;
+            let cx = x;
+            if (prefix) {
+                ctx.fillText(prefix, cx, y);
+                cx += ctx.measureText(prefix).width;
+            }
+            if (vecName) {
+                ctx.fillText(vecName, cx, y);
+                let w = ctx.measureText(vecName).width;
+                let lineY = y - 14;
+                ctx.beginPath();
+                ctx.moveTo(cx, lineY);
+                ctx.lineTo(cx + w, lineY);
+                ctx.moveTo(cx + w - 3, lineY - 3);
+                ctx.lineTo(cx + w, lineY);
+                ctx.lineTo(cx + w - 3, lineY + 3);
+                ctx.stroke();
+                cx += w;
+            }
+            if (suffix) {
+                ctx.fillText(suffix, cx, y);
+            }
+        }
+
+        // Globale Hilfsfunktion für ein vollständiges, einheitliches 3D-Koordinatensystem
+        function draw3DSystem(ctx, width, height, origin, boxSize) {
+            ctx.strokeStyle = 'rgba(140, 118, 98, 0.3)'; // Leichtes Mocha-600
+            ctx.lineWidth = 1;
+            
+            // Perfekt ausgerichtetes Grid (verhindert Verschiebungen bei dynamischen Breiten)
+            const gridStartX = (origin.x % boxSize + boxSize) % boxSize;
+            for (let x = gridStartX; x < width; x += boxSize) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+            }
+            
+            const gridStartY = (origin.y % boxSize + boxSize) % boxSize;
+            for (let y = gridStartY; y < height; y += boxSize) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+            }
+
+            ctx.strokeStyle = '#a8a29e';
+            ctx.fillStyle = '#fdfbf7';
+            ctx.lineWidth = 2.5;
+
+            // Pfeil-Zeichner
+            const drawArr = (x, y, angle) => {
+                ctx.save(); ctx.translate(x, y); ctx.rotate(angle);
+                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-12, -6); ctx.lineTo(-12, 6);
+                ctx.fillStyle = '#a8a29e'; ctx.fill(); ctx.restore();
+            };
+
+            const maxTicks = 7; 
+
+            // x2-Achse (horizontal)
+            const startX2 = origin.x - maxTicks * boxSize - 25; 
+            const endX2 = origin.x + maxTicks * boxSize + 25;
+            ctx.beginPath(); ctx.moveTo(startX2, origin.y); ctx.lineTo(endX2, origin.y); ctx.stroke();
+            drawArr(endX2, origin.y, 0);
+            ctx.font = 'bold 16px sans-serif';
+            ctx.fillText('x₂', endX2 + 5, origin.y - 15);
+
+            // x3-Achse (vertikal)
+            const startX3 = origin.y + maxTicks * boxSize + 25; 
+            const endX3 = origin.y - maxTicks * boxSize - 25;
+            ctx.beginPath(); ctx.moveTo(origin.x, startX3); ctx.lineTo(origin.x, endX3); ctx.stroke();
+            drawArr(origin.x, endX3, -Math.PI / 2);
+            ctx.fillText('x₃', origin.x - 30, endX3 + 15);
+
+            // x1-Achse (diagonal - PROPORTIONAL GEKÜRZT)
+            const startX1_x = origin.x + maxTicks * (boxSize / 2) + 25;
+            const startX1_y = origin.y - maxTicks * (boxSize / 2) - 25;
+            const endX1_x = origin.x - maxTicks * (boxSize / 2) - 25;
+            const endX1_y = origin.y + maxTicks * (boxSize / 2) + 25;
+            ctx.beginPath(); ctx.moveTo(startX1_x, startX1_y); ctx.lineTo(endX1_x, endX1_y); ctx.stroke();
+            drawArr(endX1_x, endX1_y, 3 * Math.PI / 4);
+            ctx.fillText('x₁', endX1_x - 25, endX1_y + 15);
+
+            // Achsen-Ticks (Skalierung)
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.lineWidth = 1.5;
+
+            for (let i = -maxTicks; i <= maxTicks; i++) {
+                if (i === 0) continue;
+                
+                // x2 Ticks
+                let tx2 = origin.x + i * boxSize;
+                ctx.beginPath(); ctx.moveTo(tx2, origin.y - 4); ctx.lineTo(tx2, origin.y + 4); ctx.stroke();
+                ctx.fillText(i, tx2, origin.y + 18);
+
+                // x3 Ticks
+                let ty3 = origin.y - i * boxSize;
+                ctx.beginPath(); ctx.moveTo(origin.x - 4, ty3); ctx.lineTo(origin.x + 4, ty3); ctx.stroke();
+                ctx.fillText(i, origin.x - 18, ty3);
+
+                // x1 Ticks
+                let tx1 = origin.x - i * (boxSize / 2);
+                let ty1 = origin.y + i * (boxSize / 2);
+                ctx.beginPath(); ctx.moveTo(tx1 - 3, ty1 - 3); ctx.lineTo(tx1 + 3, ty1 + 3); ctx.stroke();
+                ctx.fillText(i, tx1, ty1 - 14);
+            }
+            
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'alphabetic';
+        }
+
+        // Definition der Unterrichtsreihe
+        const topics = [
+            { id: '3d-koord', title: 'Das 3D-Koordinatensystem' },
+            { id: 'abstand', title: 'Abstand zwischen Punkten' },
+            { id: 'vektorbegriff', title: 'Der Vektorbegriff' },
+            { id: 'rechnen-vektoren', title: 'Rechnen mit Vektoren' }, 
+            { id: 'kollinear', title: 'Kollinearität / Lineare Abhängigkeit' },
+            { id: 'gerade-param', title: 'Die Gerade in Parameterform' },
+            { id: 'lage-geraden', title: 'Lagebeziehungen zwischen Geraden' },
+            { id: 'ebene-param', title: 'Die Ebene in Parameterform' },
+            { id: 'gleichungssysteme', title: 'Lineare Gleichungssysteme' },
+            { id: 'lage-gerade-ebene', title: 'Lage Gerade und Ebene' },
+            { id: 'skalarprodukt', title: 'Das Skalarprodukt' },
+            { id: 'winkel-geraden', title: 'Winkel zwischen Geraden' },
+            { id: 'winkel-gerade-ebene', title: 'Winkel Gerade und Ebene' },
+            { id: 'ebene-normalen', title: 'Ebenen in Normalenform' },
+            { id: 'ebene-koordinaten', title: 'Ebenen in Koordinatenform' },
+            { id: 'spurpunkte', title: 'Spurpunkte von Ebenen' },
+            { id: 'abstandsprobleme', title: 'Abstandsprobleme' } 
+        ];
+
+        let activeTopicId = '3d-koord';
+
+        // --- Navigation & UI Logic ---
+        function renderNav() {
+            const container = document.getElementById('nav-container');
+            container.innerHTML = '';
+            
+            topics.forEach((topic, index) => {
+                const btn = document.createElement('button');
+                const isActive = topic.id === activeTopicId;
+                
+                btn.className = `w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-start gap-3 group ${
+                    isActive 
+                    ? 'bg-gold-500/20 text-gold-400 border border-gold-500/30 shadow-inner' 
+                    : 'text-creme-200 hover:bg-mocha-800 hover:text-white border border-transparent'
+                }`;
+                
+                btn.innerHTML = `
+                    <span class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                        isActive ? 'bg-gold-500 text-mocha-900 shadow-md' : 'bg-mocha-700 text-creme-300 group-hover:bg-mocha-600'
+                    }">${index + 1}</span>
+                    <span class="font-medium mt-0.5 leading-tight">${topic.title}</span>
+                `;
+                
+                btn.onclick = () => {
+                    activeTopicId = topic.id;
+                    renderNav();
+                    renderContent();
+                };
+                
+                container.appendChild(btn);
+            });
+        }
+
+        // --- Topic Rendering Router ---
+        function renderContent() {
+            const mainDiv = document.getElementById('main-content');
+            const topic = topics.find(t => t.id === activeTopicId);
+
+            if (topic.id === '3d-koord') mainDiv.innerHTML = getTopic1HTML();
+            else if (topic.id === 'abstand') mainDiv.innerHTML = getTopic2HTML();
+            else if (topic.id === 'vektorbegriff') mainDiv.innerHTML = getTopic3HTML();
+            else if (topic.id === 'rechnen-vektoren') mainDiv.innerHTML = getTopic4HTML(); 
+            else if (topic.id === 'kollinear') mainDiv.innerHTML = getTopic5HTML();
+            else if (topic.id === 'gerade-param') mainDiv.innerHTML = getTopic6HTML();
+            else if (topic.id === 'lage-geraden') mainDiv.innerHTML = getTopic7HTML();
+            else if (topic.id === 'ebene-param') mainDiv.innerHTML = getTopic8HTML();
+            else if (topic.id === 'gleichungssysteme') mainDiv.innerHTML = getTopic9HTML();
+            else if (topic.id === 'lage-gerade-ebene') mainDiv.innerHTML = getTopic10HTML();
+            else if (topic.id === 'skalarprodukt') mainDiv.innerHTML = getTopic11HTML();
+            else if (topic.id === 'winkel-geraden') mainDiv.innerHTML = getTopic12HTML();
+            else if (topic.id === 'winkel-gerade-ebene') mainDiv.innerHTML = getTopic13HTML();
+            else if (topic.id === 'ebene-normalen') mainDiv.innerHTML = getTopic14HTML();
+            else if (topic.id === 'ebene-koordinaten') mainDiv.innerHTML = getTopic15HTML();
+            else if (topic.id === 'spurpunkte') mainDiv.innerHTML = getTopic16HTML();
+            else if (topic.id === 'abstandsprobleme') mainDiv.innerHTML = getTopic17HTML();
+
+            // MathJax Update
+            if (typeof MathJax !== 'undefined' && typeof MathJax.typesetPromise === 'function') {
+                MathJax.typesetPromise([mainDiv]).catch(err => console.error("MathJax Fehler:", err));
+            }
+
+            // Sicherstellen, dass das CSS angewendet wurde, bevor Canvas berechnet wird (Verhindert Strecken!)
+            setTimeout(() => {
+                if (topic.id === '3d-koord') initCanvas();
+                else if (topic.id === 'abstand') { initCanvas2(); initPractice2(); }
+                else if (topic.id === 'kollinear') initCanvas3();
+                else if (topic.id === 'gerade-param') { initCanvas4(); initCanvas4b(); }
+                else if (topic.id === 'ebene-param') initCanvas5();
+                else if (topic.id === 'winkel-geraden') initCanvas6();
+                else if (topic.id === 'winkel-gerade-ebene') initCanvas7();
+                else if (topic.id === 'skalarprodukt') initCanvas8();
+                else if (topic.id === 'spurpunkte') initCanvas9();
+                else if (topic.id === 'abstandsprobleme') { initCanvas10(); initCanvas11(); initCanvas12(); }
+            }, 50);
+        }
+
+        // Window-Resize Listener für perfekte Aspect-Ratios
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                renderContent();
+            }, 250);
+        });
+
+        // --- HTML Generatoren ---
+        function getTopic1HTML() {
+            return `
+                <div class="max-w-5xl mx-auto animation-fade-in">
+                    <div class="mb-8">
+                        <span class="text-gold-400 font-bold tracking-wider text-sm uppercase">Thema 1</span>
+                        <h2 class="text-3xl md:text-4xl font-extrabold text-creme-100 mt-2">Das 3D-Koordinatensystem</h2>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                        <div class="space-y-6">
+                            <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600">
+                                <h3 class="text-2xl font-bold text-creme-100 mb-4">Aufbau</h3>
+                                <p class="text-lg text-creme-200 mb-4">Um Punkte im Raum darzustellen, erweitern wir das flache x-y-System um eine dritte Dimension. Es besteht aus drei Achsen, die alle senkrecht aufeinander stehen:</p>
+                                <ul class="space-y-3 mb-6">
+                                    <li class="flex items-center"><span class="w-3 h-3 rounded-full bg-red-400 mr-3"></span><strong class="text-white mr-2">$x_1$-Achse</strong> (zeigt nach vorne/hinten)</li>
+                                    <li class="flex items-center"><span class="w-3 h-3 rounded-full bg-green-400 mr-3"></span><strong class="text-white mr-2">$x_2$-Achse</strong> (zeigt nach rechts/links)</li>
+                                    <li class="flex items-center"><span class="w-3 h-3 rounded-full bg-blue-400 mr-3"></span><strong class="text-white mr-2">$x_3$-Achse</strong> (zeigt nach oben/unten)</li>
+                                </ul>
+                                <p class="text-creme-200">Ein Punkt wird als $P(x_1 | x_2 | x_3)$ angegeben. Um ihn einzuzeichnen, geht man vom Ursprung $(0|0|0)$ aus nacheinander die Schritte entlang der Achsen.</p>
+                            </div>
+
+                            <div class="bg-amber-900/30 p-6 rounded-2xl border border-amber-500/30">
+                                <h4 class="font-bold text-gold-400 mb-2 flex items-center">
+                                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    Zeichen-Tipp fürs Heft
+                                </h4>
+                                <p class="text-sm text-creme-200">Auf Kästchenpapier zeichnet man die $x_2$- und $x_3$-Achse normal im 90° Winkel. Die $x_1$-Achse zeichnet man diagonal im 45° Winkel (durch die Kästchendiagonalen). <strong class="text-white">Wichtig:</strong> Eine Längeneinheit auf der $x_1$-Achse entspricht genau einer Kästchendiagonale (Verkürzung zur räumlichen Darstellung).</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-mocha-800 border border-mocha-600 rounded-2xl p-4 shadow-lg flex flex-col items-center">
+                            <h3 class="w-full text-center font-bold text-creme-200 mb-2">Interaktives Konstruieren</h3>
+                            <p class="text-sm text-creme-300 text-center mb-4">Schrittweise Konstruktion des Punktes P(3 | 4 | 5)</p>
+                            
+                            <div class="relative bg-mocha-900 rounded-xl overflow-hidden border border-mocha-600 w-full aspect-[4/3] shadow-inner">
+                                <canvas id="coordCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+                            </div>
+                            
+                            <div class="mt-4 flex items-center gap-3 w-full">
+                                <button id="btnPrev" class="flex-1 py-2 bg-mocha-700 border border-mocha-600 hover:bg-mocha-600 text-creme-200 rounded-lg font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed">Zurück</button>
+                                <div class="font-bold text-gold-400 w-24 text-center" id="stepIndicator">Schritt 0/4</div>
+                                <button id="btnNext" class="flex-1 py-2 bg-[#8b6b4a] hover:bg-[#a3805b] text-white rounded-lg font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed">Nächster</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTopic2HTML() {
+            return `
+                <div class="max-w-5xl mx-auto animation-fade-in">
+                    <div class="mb-8">
+                        <span class="text-gold-400 font-bold tracking-wider text-sm uppercase">Thema 2</span>
+                        <h2 class="text-3xl md:text-4xl font-extrabold text-creme-100 mt-2">Abstand zwischen Punkten</h2>
+                    </div>
+
+                    <div class="flex flex-col lg:flex-row gap-8 items-stretch mb-8">
+                        <div class="flex-1 bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600 flex flex-col justify-center">
+                            <h3 class="text-2xl font-bold text-creme-100 mb-4">Der 3D Pythagoras</h3>
+                            <p class="text-lg text-creme-200 mb-4">Den Abstand zweier Punkte $A(a_1|a_2|a_3)$ und $B(b_1|b_2|b_3)$ berechnet man mit einer einfachen Erweiterung des Satzes des Pythagoras auf drei Dimensionen.</p>
+                            <div class="bg-amber-900/30 border-l-4 border-amber-500 p-5 rounded-r-xl my-6">
+                                <div class="text-xl md:text-2xl font-bold text-center text-gold-300 math-box">
+                                    $$d(A,B) = \\sqrt{(b_1 - a_1)^2 + (b_2 - a_2)^2 + (b_3 - a_3)^2}$$
+                                </div>
+                            </div>
+                            <p class="text-creme-200">Man berechnet die Differenz der jeweiligen Koordinaten, quadriert diese, addiert alles und zieht am Ende die Wurzel.</p>
+                        </div>
+                        
+                        <div class="w-full lg:w-1/2 bg-mocha-900 p-4 rounded-2xl border border-mocha-600 shadow-lg flex flex-col justify-center items-center min-h-[350px]">
+                            <div class="relative w-full aspect-[4/3]">
+                                <canvas id="distanceCanvas" class="absolute top-0 left-0 w-full h-full rounded-xl"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Practice Section -->
+                    <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600">
+                        <h3 class="text-xl font-bold text-creme-100 mb-4 flex items-center">
+                            <svg class="w-6 h-6 mr-2 text-gold-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                            Interaktiver Rechner
+                        </h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="space-y-4">
+                                <div class="flex items-center gap-4 bg-mocha-900 p-3 rounded-lg border border-mocha-600">
+                                    <span class="font-bold text-creme-100 w-8">A = (</span>
+                                    <input type="number" id="a1" value="1" class="w-16 bg-mocha-700 border border-mocha-500 rounded p-1 text-center text-white focus:outline-none focus:border-gold-400"> <span class="text-mocha-500">|</span>
+                                    <input type="number" id="a2" value="2" class="w-16 bg-mocha-700 border border-mocha-500 rounded p-1 text-center text-white focus:outline-none focus:border-gold-400"> <span class="text-mocha-500">|</span>
+                                    <input type="number" id="a3" value="3" class="w-16 bg-mocha-700 border border-mocha-500 rounded p-1 text-center text-white focus:outline-none focus:border-gold-400">
+                                    <span class="font-bold text-creme-100">)</span>
+                                </div>
+                                <div class="flex items-center gap-4 bg-mocha-900 p-3 rounded-lg border border-mocha-600">
+                                    <span class="font-bold text-creme-100 w-8">B = (</span>
+                                    <input type="number" id="b1" value="5" class="w-16 bg-mocha-700 border border-mocha-500 rounded p-1 text-center text-white focus:outline-none focus:border-gold-400"> <span class="text-mocha-500">|</span>
+                                    <input type="number" id="b2" value="5" class="w-16 bg-mocha-700 border border-mocha-500 rounded p-1 text-center text-white focus:outline-none focus:border-gold-400"> <span class="text-mocha-500">|</span>
+                                    <input type="number" id="b3" value="3" class="w-16 bg-mocha-700 border border-mocha-500 rounded p-1 text-center text-white focus:outline-none focus:border-gold-400">
+                                    <span class="font-bold text-creme-100">)</span>
+                                </div>
+                                <button id="calcDistBtn" class="w-full py-3 bg-[#8b6b4a] hover:bg-[#a3805b] text-white rounded-lg font-bold transition-colors shadow-md">Abstand berechnen</button>
+                            </div>
+                            
+                            <div class="bg-mocha-900 rounded-xl border border-mocha-600 p-5 flex flex-col justify-center min-h-[160px]" id="distResult">
+                                <p class="text-mocha-400 text-center italic">Gib Koordinaten ein und klicke auf Berechnen.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTopic3HTML() {
+            return `
+                <div class="max-w-5xl mx-auto animation-fade-in">
+                    <div class="mb-8">
+                        <span class="text-gold-400 font-bold tracking-wider text-sm uppercase">Thema 3</span>
+                        <h2 class="text-3xl md:text-4xl font-extrabold text-creme-100 mt-2">Der Vektorbegriff</h2>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                        <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600 flex flex-col justify-center">
+                            <h3 class="text-2xl font-bold text-creme-100 mb-4">Länge und Richtung</h3>
+                            <p class="text-creme-200 text-lg mb-4">Im Unterschied zu gewöhnlichen Zahlen (Skalaren), die nur einen Wert besitzen, haben Vektoren immer zwei Eigenschaften: <strong class="text-white">Eine Länge</strong> und <strong class="text-white">eine Richtung</strong>.</p>
+                            <p class="text-creme-200 text-lg">Anschaulich werden sie durch Pfeile dargestellt. Ein Vektor $\\vec{v}$ stellt die <strong class="text-white">Menge aller Pfeile</strong> im Raum dar, die parallel zueinander sind, in die gleiche Richtung zeigen und gleich lang sind (Repräsentanten).</p>
+                        </div>
+                        
+                        <div class="bg-mocha-900 border border-mocha-600 rounded-2xl p-6 shadow-lg flex items-center justify-center">
+                            <svg viewBox="0 0 300 200" class="w-full max-w-sm">
+                                <defs>
+                                    <marker id="arrowGold" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                                        <polygon points="0 0, 8 3, 0 6" fill="#fbbf24" />
+                                    </marker>
+                                </defs>
+                                <line x1="40" y1="150" x2="120" y2="70" stroke="#fbbf24" stroke-width="3" marker-end="url(#arrowGold)"/>
+                                <line x1="120" y1="180" x2="200" y2="100" stroke="#fbbf24" stroke-width="3" marker-end="url(#arrowGold)"/>
+                                <line x1="180" y1="120" x2="260" y2="40" stroke="#fbbf24" stroke-width="3" marker-end="url(#arrowGold)"/>
+                                
+                                <g transform="translate(60, 100)">
+                                    <text x="0" y="0" fill="#fde68a" font-weight="bold">v</text>
+                                    <path d="M 0 -12 L 8 -12 L 5 -15 M 8 -12 L 5 -9" stroke="#fde68a" stroke-width="1.5" fill="none"/>
+                                </g>
+                                <g transform="translate(140, 130)">
+                                    <text x="0" y="0" fill="#fde68a" font-weight="bold">v</text>
+                                    <path d="M 0 -12 L 8 -12 L 5 -15 M 8 -12 L 5 -9" stroke="#fde68a" stroke-width="1.5" fill="none"/>
+                                </g>
+                                <g transform="translate(200, 70)">
+                                    <text x="0" y="0" fill="#fde68a" font-weight="bold">v</text>
+                                    <path d="M 0 -12 L 8 -12 L 5 -15 M 8 -12 L 5 -9" stroke="#fde68a" stroke-width="1.5" fill="none"/>
+                                </g>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600">
+                        <h3 class="text-2xl font-bold text-creme-100 mb-6">Orts- und Verbindungsvektoren</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-mocha-900 border border-mocha-600 rounded-xl p-5 relative overflow-hidden">
+                                <div class="absolute top-0 right-0 w-24 h-24 bg-gold-500/10 rounded-bl-full -mr-4 -mt-4"></div>
+                                <h4 class="font-bold text-white text-lg mb-2 relative z-10">Ortsvektor</h4>
+                                <p class="text-creme-200 text-sm mb-4 relative z-10">Verbindet den Ursprung $O(0|0|0)$ mit einem Punkt $P$. Die Koordinaten des Vektors entsprechen genau den Koordinaten des Punktes, nur als Spalte geschrieben.</p>
+                                <div class="text-center font-bold text-gold-300">
+                                    $$\\vec{p} = \\vec{OP} = \\begin{pmatrix} p_1 \\\\ p_2 \\\\ p_3 \\end{pmatrix}$$
+                                </div>
+                            </div>
+                            
+                            <div class="bg-mocha-900 border border-mocha-600 rounded-xl p-5 relative overflow-hidden">
+                                <div class="absolute top-0 right-0 w-24 h-24 bg-green-500/10 rounded-bl-full -mr-4 -mt-4"></div>
+                                <h4 class="font-bold text-white text-lg mb-2 relative z-10">Verbindungsvektor</h4>
+                                <p class="text-creme-200 text-sm mb-4 relative z-10">Verbindet zwei Punkte $A$ und $B$. Man rechnet immer <strong class="text-white">"Spitze minus Fuß"</strong> (Zielpunkt minus Startpunkt).</p>
+                                <div class="text-center font-bold text-green-300">
+                                    $$\\vec{AB} = \\vec{b} - \\vec{a} = \\begin{pmatrix} b_1 - a_1 \\\\ b_2 - a_2 \\\\ b_3 - a_3 \\end{pmatrix}$$
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600 mt-8">
+                        <h3 class="text-2xl font-bold text-creme-100 mb-6">Der Gegenvektor</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                            <div>
+                                <p class="text-creme-200 mb-4">Zu jedem Vektor $\\vec{v}$ gibt es einen <strong class="text-white">Gegenvektor</strong> $-\\vec{v}$. Das ist ein gleich langer Pfeil, der exakt in die entgegengesetzte Richtung zeigt.</p>
+                                <p class="text-creme-200 mb-4">Rechnerisch erhält man ihn ganz einfach, indem man bei allen Komponenten das Vorzeichen umdreht:</p>
+                                <div class="text-xl text-center font-bold text-red-300 bg-red-900/20 py-3 rounded-lg border border-red-800/50">
+                                    $$-\\vec{v} = \\begin{pmatrix} -v_1 \\\\ -v_2 \\\\ -v_3 \\end{pmatrix}$$
+                                </div>
+                            </div>
+                            <div class="bg-mocha-900 border border-mocha-600 rounded-2xl p-6 shadow-inner flex items-center justify-center">
+                                <svg viewBox="0 0 200 150" class="w-full max-w-[250px]">
+                                    <defs>
+                                        <marker id="arrowV" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#fbbf24" /></marker>
+                                        <marker id="arrowMinusV" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#f87171" /></marker>
+                                    </defs>
+                                    <!-- Vektor v -->
+                                    <line x1="100" y1="75" x2="160" y2="25" stroke="#fbbf24" stroke-width="3" marker-end="url(#arrowV)"/>
+                                    <g transform="translate(125, 40)">
+                                        <text x="0" y="0" fill="#fde68a" font-weight="bold">v</text>
+                                        <path d="M 0 -12 L 8 -12 L 5 -15 M 8 -12 L 5 -9" stroke="#fde68a" stroke-width="1.5" fill="none"/>
+                                    </g>
+                                    
+                                    <!-- Gegenvektor -v -->
+                                    <line x1="100" y1="75" x2="40" y2="125" stroke="#f87171" stroke-width="3" stroke-dasharray="4,3" marker-end="url(#arrowMinusV)"/>
+                                    <g transform="translate(60, 125)">
+                                        <text x="0" y="0" fill="#fca5a5" font-weight="bold">-v</text>
+                                        <path d="M 8 -12 L 16 -12 L 13 -15 M 16 -12 L 13 -9" stroke="#fca5a5" stroke-width="1.5" fill="none"/>
+                                    </g>
+                                    
+                                    <!-- Ursprungspunkt -->
+                                    <circle cx="100" cy="75" r="4" fill="#a8a29e"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTopic4HTML() {
+            return `
+                <div class="max-w-5xl mx-auto animation-fade-in">
+                    <div class="mb-8">
+                        <span class="text-gold-400 font-bold tracking-wider text-sm uppercase">Thema 4</span>
+                        <h2 class="text-3xl md:text-4xl font-extrabold text-creme-100 mt-2">Rechnen mit Vektoren</h2>
+                    </div>
+                    
+                    <!-- Teil 1: Addition und Subtraktion -->
+                    <div class="mb-12">
+                        <h3 class="text-2xl font-bold text-white mb-6 border-b border-mocha-600 pb-2">A. Addition und Subtraktion</h3>
+                        <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600 mb-8">
+                            <h4 class="text-xl font-bold text-white mb-4">Rechnerische Lösung</h4>
+                            <p class="text-lg text-creme-200 mb-6">Vektoren werden komponentenweise addiert oder subtrahiert.</p>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                                <div class="bg-amber-900/30 border-l-4 border-amber-500 p-6 rounded-r-xl border-y border-r border-amber-500/30">
+                                    <div class="text-2xl text-center font-bold text-gold-300">
+                                        $$\\vec{a} \\pm \\vec{b} = \\begin{pmatrix} a_1 \\pm b_1 \\\\ a_2 \\pm b_2 \\\\ a_3 \\pm b_3 \\end{pmatrix}$$
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-mocha-900 p-5 rounded-xl border border-mocha-600 h-full flex flex-col justify-center">
+                                    <h5 class="font-bold text-white mb-2">Beispiel:</h5>
+                                    <div class="text-lg text-center font-bold text-creme-200 overflow-x-auto">
+                                        $$\\begin{pmatrix} 2 \\\\ 1 \\\\ 4 \\end{pmatrix} + \\begin{pmatrix} 3 \\\\ -2 \\\\ 1 \\end{pmatrix} = \\begin{pmatrix} 5 \\\\ -1 \\\\ 5 \\end{pmatrix}$$
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="bg-mocha-800 border border-mocha-600 rounded-2xl p-6 shadow-lg flex flex-col items-center text-center">
+                                <h4 class="text-xl font-bold text-white mb-3">Geometrische Addition</h4>
+                                <p class="text-creme-200 mb-4">Man hängt den Fuß des zweiten Vektors an die Spitze des ersten Vektors (<strong class="text-white">"Spitze-an-Fuß"-Regel</strong>). Der resultierende Vektor startet am Anfang des ersten und endet an der Spitze des letzten.</p>
+                                <svg viewBox="0 0 200 150" class="w-full max-w-[250px] mx-auto mt-auto">
+                                    <defs>
+                                        <marker id="arrAdd1" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#fbbf24" /></marker>
+                                        <marker id="arrAdd2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4ade80" /></marker>
+                                        <marker id="arrAdd3" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#f87171" /></marker>
+                                    </defs>
+                                    <line x1="30" y1="110" x2="120" y2="110" stroke="#fbbf24" stroke-width="3" marker-end="url(#arrAdd1)"/>
+                                    <line x1="120" y1="110" x2="80" y2="40" stroke="#4ade80" stroke-width="3" marker-end="url(#arrAdd2)"/>
+                                    <line x1="30" y1="110" x2="80" y2="40" stroke="#f87171" stroke-width="3" stroke-dasharray="4,4" marker-end="url(#arrAdd3)"/>
+                                    
+                                    <g transform="translate(70, 130)">
+                                        <text x="0" y="0" fill="#fde68a" font-weight="bold">a</text>
+                                        <path d="M 0 -12 L 8 -12 L 5 -15 M 8 -12 L 5 -9" stroke="#fde68a" stroke-width="1.5" fill="none"/>
+                                    </g>
+                                    <g transform="translate(110, 70)">
+                                        <text x="0" y="0" fill="#86efac" font-weight="bold">b</text>
+                                        <path d="M 0 -12 L 8 -12 L 5 -15 M 8 -12 L 5 -9" stroke="#86efac" stroke-width="1.5" fill="none"/>
+                                    </g>
+                                    <g transform="translate(25, 75)">
+                                        <text x="0" y="0" fill="#fca5a5" font-weight="bold">a + b</text>
+                                        <path d="M 0 -12 L 8 -12 L 5 -15 M 8 -12 L 5 -9" stroke="#fca5a5" stroke-width="1.5" fill="none"/>
+                                        <path d="M 28 -12 L 36 -12 L 33 -15 M 36 -12 L 33 -9" stroke="#fca5a5" stroke-width="1.5" fill="none"/>
+                                    </g>
+                                    <circle cx="30" cy="110" r="4" fill="#a8a29e"/>
+                                </svg>
+                            </div>
+
+                            <div class="bg-mocha-800 border border-mocha-600 rounded-2xl p-6 shadow-lg flex flex-col items-center text-center">
+                                <h4 class="text-xl font-bold text-white mb-3">Geometrische Subtraktion</h4>
+                                <p class="text-creme-200 mb-4">Um $\\vec{a} - \\vec{b}$ zu bilden, legt man die Fußpunkte beider Vektoren an denselben Startpunkt. Der resultierende Differenzvektor verbindet dann die Spitze von $\\vec{b}$ mit der Spitze von $\\vec{a}$.</p>
+                                <svg viewBox="0 0 200 150" class="w-full max-w-[250px] mx-auto mt-auto">
+                                    <defs>
+                                        <marker id="arrSub1" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#fbbf24" /></marker>
+                                        <marker id="arrSub2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4ade80" /></marker>
+                                        <marker id="arrSub3" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#f87171" /></marker>
+                                    </defs>
+                                    <line x1="50" y1="110" x2="150" y2="110" stroke="#fbbf24" stroke-width="3" marker-end="url(#arrSub1)"/>
+                                    <line x1="50" y1="110" x2="90" y2="40" stroke="#4ade80" stroke-width="3" marker-end="url(#arrSub2)"/>
+                                    <line x1="90" y1="40" x2="150" y2="110" stroke="#f87171" stroke-width="3" stroke-dasharray="4,4" marker-end="url(#arrSub3)"/>
+                                    
+                                    <g transform="translate(90, 130)">
+                                        <text x="0" y="0" fill="#fde68a" font-weight="bold">a</text>
+                                        <path d="M 0 -12 L 8 -12 L 5 -15 M 8 -12 L 5 -9" stroke="#fde68a" stroke-width="1.5" fill="none"/>
+                                    </g>
+                                    <g transform="translate(50, 70)">
+                                        <text x="0" y="0" fill="#86efac" font-weight="bold">b</text>
+                                        <path d="M 0 -12 L 8 -12 L 5 -15 M 8 -12 L 5 -9" stroke="#86efac" stroke-width="1.5" fill="none"/>
+                                    </g>
+                                    <g transform="translate(125, 70)">
+                                        <text x="0" y="0" fill="#fca5a5" font-weight="bold">a - b</text>
+                                        <path d="M 0 -12 L 8 -12 L 5 -15 M 8 -12 L 5 -9" stroke="#fca5a5" stroke-width="1.5" fill="none"/>
+                                        <path d="M 24 -12 L 32 -12 L 29 -15 M 32 -12 L 29 -9" stroke="#fca5a5" stroke-width="1.5" fill="none"/>
+                                    </g>
+                                    <circle cx="50" cy="110" r="4" fill="#a8a29e"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Teil 2: Skalare Multiplikation (Ehemals Thema 5) -->
+                    <div>
+                        <h3 class="text-2xl font-bold text-white mb-6 border-b border-mocha-600 pb-2">B. Skalare Multiplikation</h3>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                            <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600 flex flex-col">
+                                <h4 class="text-xl font-bold text-white mb-4">Rechnerische Lösung</h4>
+                                <p class="text-lg text-creme-200 mb-6">Ein Vektor wird mit einer reellen Zahl (einem sogenannten <em>Skalar</em>) multipliziert, indem <strong class="text-white">jede seiner Komponenten</strong> mit dieser Zahl multipliziert wird.</p>
+                                
+                                <div class="bg-amber-900/30 border-l-4 border-amber-500 p-6 rounded-r-xl mb-6 border-y border-r border-amber-500/30">
+                                    <div class="text-2xl text-center font-bold text-gold-300">
+                                        $$k \\cdot \\vec{a} = \\begin{pmatrix} k \\cdot a_1 \\\\ k \\cdot a_2 \\\\ k \\cdot a_3 \\end{pmatrix}$$
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-mocha-900 p-5 rounded-xl border border-mocha-600 mt-auto">
+                                    <h5 class="font-bold text-white mb-2">Beispiel:</h5>
+                                    <div class="text-lg text-center font-bold text-creme-200 overflow-x-auto">
+                                        $$3 \\cdot \\begin{pmatrix} 1 \\\\ -2 \\\\ 4 \\end{pmatrix} = \\begin{pmatrix} 3 \\\\ -6 \\\\ 12 \\end{pmatrix}$$
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600">
+                                <h4 class="text-xl font-bold text-white mb-4">Geometrische Bedeutung</h4>
+                                <p class="text-creme-200 mb-6">Skalare Multiplikation ändert (meistens) die Länge eines Vektors. Die Zahl $k$ wirkt wie ein Skalierungsfaktor:</p>
+                                
+                                <ul class="space-y-4 text-creme-200 mb-8">
+                                    <li class="flex items-start">
+                                        <span class="bg-green-900/50 text-green-400 px-2 py-1 rounded text-sm font-bold mr-3 border border-green-800/50 w-16 text-center">|k| > 1</span>
+                                        <span>Der Vektor wird <strong class="text-white">gestreckt</strong> (verlängert).</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <span class="bg-blue-900/50 text-blue-400 px-2 py-1 rounded text-sm font-bold mr-3 border border-blue-800/50 w-16 text-center">&lt; 1</span>
+                                        <span>Der Vektor wird <strong class="text-white">gestaucht</strong> (verkürzt).</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <span class="bg-red-900/50 text-red-400 px-2 py-1 rounded text-sm font-bold mr-3 border border-red-800/50 w-16 text-center">k &lt; 0</span>
+                                        <span>Der Vektor ändert seine Richtung um 180° (<strong class="text-white">Gegenrichtung</strong>).</span>
+                                    </li>
+                                </ul>
+                                
+                                <div class="bg-mocha-900 border border-mocha-600 rounded-xl p-6 shadow-inner">
+                                    <svg viewBox="0 0 300 150" class="w-full mx-auto">
+                                        <defs>
+                                            <marker id="arrV" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#fbbf24" /></marker>
+                                            <marker id="arr2V" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4ade80" /></marker>
+                                            <marker id="arrMV" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#f87171" /></marker>
+                                        </defs>
+                                        <!-- v -->
+                                        <line x1="50" y1="30" x2="110" y2="30" stroke="#fbbf24" stroke-width="3" marker-end="url(#arrV)"/>
+                                        <g transform="translate(75, 20)">
+                                            <text x="0" y="0" fill="#fde68a" font-weight="bold">v</text>
+                                            <path d="M 0 -12 L 8 -12 L 5 -15 M 8 -12 L 5 -9" stroke="#fde68a" stroke-width="1.5" fill="none"/>
+                                        </g>
+                                        <!-- 2v (gestreckt) -->
+                                        <line x1="50" y1="75" x2="170" y2="75" stroke="#4ade80" stroke-width="3" marker-end="url(#arr2V)"/>
+                                        <g transform="translate(100, 65)">
+                                            <text x="0" y="0" fill="#86efac" font-weight="bold">2v</text>
+                                            <path d="M 10 -12 L 18 -12 L 15 -15 M 18 -12 L 15 -9" stroke="#86efac" stroke-width="1.5" fill="none"/>
+                                        </g>
+                                        <!-- -0.5v (gestaucht + umgedreht) -->
+                                        <line x1="50" y1="120" x2="20" y2="120" stroke="#f87171" stroke-width="3" marker-end="url(#arrMV)"/>
+                                        <g transform="translate(35, 140)">
+                                            <text x="0" y="0" fill="#fca5a5" font-weight="bold">-0.5v</text>
+                                            <path d="M 33 -12 L 41 -12 L 38 -15 M 41 -12 L 38 -9" stroke="#fca5a5" stroke-width="1.5" fill="none"/>
+                                        </g>
+                                        
+                                        <!-- Ursprungspunkte -->
+                                        <circle cx="50" cy="30" r="3" fill="#a8a29e"/>
+                                        <circle cx="50" cy="75" r="3" fill="#a8a29e"/>
+                                        <circle cx="50" cy="120" r="3" fill="#a8a29e"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTopic5HTML() {
+            return `
+                <div class="max-w-5xl mx-auto animation-fade-in">
+                    <div class="mb-8">
+                        <span class="text-gold-400 font-bold tracking-wider text-sm uppercase">Thema 5</span>
+                        <h2 class="text-3xl md:text-4xl font-extrabold text-creme-100 mt-2">Kollinearität / Lineare Abhängigkeit</h2>
+                    </div>
+                    
+                    <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600 mb-8">
+                        <h3 class="text-2xl font-bold text-white mb-4">Wann sind Vektoren kollinear?</h3>
+                        <p class="text-lg text-creme-200 mb-6">Zwei Vektoren $\\vec{a}$ und $\\vec{b}$ heißen <strong class="text-white">kollinear</strong> (oder linear abhängig), wenn sie sich durch skalare Multiplikation ineinander überführen lassen. Geometrisch bedeutet das: Sie verlaufen parallel (oder anti-parallel) zueinander und beschreiben dieselbe Richtungslinie im Raum.</p>
+                        
+                        <div class="bg-amber-900/30 border-l-4 border-amber-500 p-6 rounded-r-xl mb-4 border-y border-r border-amber-500/30 w-full lg:w-1/2">
+                            <div class="text-2xl text-center font-bold text-gold-300">
+                                $$\\vec{a} = k \\cdot \\vec{b}$$
+                            </div>
+                        </div>
+                        
+                        <p class="text-creme-200">Dies überprüft man in der Praxis, indem man ein kleines Lineares Gleichungssystem aufstellt. Findet man ein festes $k$ für alle drei Koordinatenzeilen, so sind die Vektoren kollinear.</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
+                        <div class="lg:col-span-3 flex flex-col gap-4">
+                            <h4 class="text-xl font-bold text-white mb-1">Visualisierung: Linearkombination</h4>
+                            <div class="relative bg-mocha-900 rounded-xl overflow-hidden border border-mocha-600 w-full aspect-[5/4] shadow-inner">
+                                <canvas id="collinearCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+                            </div>
+                            <div class="flex items-center gap-3 w-full bg-mocha-800 p-3 rounded-lg border border-mocha-600">
+                                <button id="btnPrev3" class="flex-1 py-2 bg-mocha-700 border border-mocha-600 hover:bg-mocha-600 text-creme-200 rounded-lg font-medium transition-colors disabled:opacity-30">Zurück</button>
+                                <button id="btnNext3" class="flex-1 py-2 bg-[#8b6b4a] hover:bg-[#a3805b] text-white rounded-lg font-medium transition-colors disabled:opacity-30">Nächster</button>
+                            </div>
+                        </div>
+                        
+                        <div class="lg:col-span-2 bg-mocha-800 p-6 rounded-2xl border border-mocha-600 h-full shadow-lg">
+                            <h4 class="text-xl font-bold text-white mb-4">Was ist eine Linearkombination?</h4>
+                            <p class="text-sm text-creme-200 mb-6">Wenn zwei Vektoren <strong class="text-white">nicht kollinear</strong> sind (sie zeigen in grundlegend verschiedene Richtungen), spannen sie gemeinsam eine flache Ebene im 3D-Raum auf. Jeder beliebige Vektor $\\vec{c}$, der in dieser Ebene liegt, lässt sich als Mix aus den ersten beiden zusammensetzen:</p>
+                            
+                            <div class="text-center font-bold text-gold-300 bg-mocha-900 p-3 rounded-lg mb-6 border border-mocha-600">
+                                $$\\vec{c} = r \\cdot \\vec{a} + s \\cdot \\vec{b}$$
+                            </div>
+                            
+                            <div id="stepExplanations3" class="space-y-4">
+                                <div class="step-card3 bg-mocha-900 p-4 rounded-xl border-l-4 border-mocha-600 transition-all duration-300" data-step="1">
+                                    <strong class="text-blue-400 block mb-1">Schritt 1: Grundlagen</strong>
+                                    <span class="text-sm text-creme-200">Gegeben sind zwei linear unabhängige (nicht-kollineare) Vektoren $\\vec{a}$ und $\\vec{b}$. Sie zeigen in verschiedene Richtungen.</span>
+                                </div>
+                                <div class="step-card3 bg-mocha-900 p-4 rounded-xl border-l-4 border-mocha-600 transition-all duration-300 opacity-40" data-step="2">
+                                    <strong class="text-white block mb-1">Schritt 2: Die Ebene</strong>
+                                    <span class="text-sm text-creme-200">Zieht man Parallelen, erkennt man das Gitter der Ebene, die von beiden aufgespannt wird.</span>
+                                </div>
+                                <div class="step-card3 bg-mocha-900 p-4 rounded-xl border-l-4 border-mocha-600 transition-all duration-300 opacity-40" data-step="3">
+                                    <strong class="text-red-400 block mb-1">Schritt 3: Zusammensetzen</strong>
+                                    <span class="text-sm text-creme-200">Der Vektor $\\vec{c}$ ist eine Linearkombination. Um $\\vec{c}$ zu erreichen, gehen wir erst ein skaliertes Stück in Richtung $\\vec{a}$ und dann parallel in Richtung $\\vec{b}$.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTopic6HTML() {
+            return `
+                <div class="max-w-5xl mx-auto animation-fade-in">
+                    <div class="mb-8">
+                        <span class="text-gold-400 font-bold tracking-wider text-sm uppercase">Thema 6</span>
+                        <h2 class="text-3xl md:text-4xl font-extrabold text-creme-100 mt-2">Die Gerade in Parameterform</h2>
+                    </div>
+
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
+                        <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600">
+                            <h3 class="text-2xl font-bold text-creme-100 mb-4">Aufbau der Gleichung</h3>
+                            <p class="text-creme-200 mb-6">Eine Gerade im Raum ist nicht mehr einfach $y = mx+b$. Sie wird durch eine Vektorgleichung beschrieben, die man wie eine Wegbeschreibung liest:</p>
+                            
+                            <div class="bg-mocha-900 border border-mocha-600 p-5 rounded-xl mb-6 relative overflow-hidden text-center text-xl font-bold text-gold-300 tracking-widest math-box">
+                                $$g: \\vec{x} = \\vec{p} + r \\cdot \\vec{u}$$
+                            </div>
+
+                            <ul class="space-y-4 text-creme-200">
+                                <li class="flex gap-4 items-start">
+                                    <span class="text-gold-400 font-bold text-lg">$\\vec{x}$</span>
+                                    <span>Ortsvektor zu einem <strong class="text-white">beliebigen Punkt</strong> auf der Geraden.</span>
+                                </li>
+                                <li class="flex gap-4 items-start">
+                                    <span class="text-indigo-400 font-bold text-lg">$\\vec{p}$</span>
+                                    <span>Der <strong class="text-white">Stützvektor</strong>. Er zeigt vom Ursprung zu einem Startpunkt (Aufpunkt) auf der Geraden.</span>
+                                </li>
+                                <li class="flex gap-4 items-start">
+                                    <span class="text-green-400 font-bold text-lg">$\\vec{u}$</span>
+                                    <span>Der <strong class="text-white">Richtungsvektor</strong>. Er gibt an, in welche Richtung die Gerade verläuft.</span>
+                                </li>
+                                <li class="flex gap-4 items-start">
+                                    <span class="text-pink-400 font-bold text-lg">$r$</span>
+                                    <span>Der <strong class="text-white">Parameter</strong> (eine reelle Zahl). Er skaliert den Richtungsvektor und lässt uns so die gesamte Gerade "abfahren".</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="bg-mocha-800 border border-mocha-600 rounded-2xl p-4 shadow-lg flex flex-col items-center">
+                            <h3 class="w-full text-center font-bold text-creme-200 mb-4">Geometrische Interpretation</h3>
+                            <div class="relative bg-mocha-900 rounded-xl overflow-hidden border border-mocha-600 w-full aspect-[4/3] shadow-inner">
+                                <canvas id="lineCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+                            </div>
+                            
+                            <div class="mt-4 flex items-center gap-3 w-full">
+                                <button id="btnPrev4" class="flex-1 py-2 bg-mocha-700 border border-mocha-600 hover:bg-mocha-600 text-creme-200 rounded-lg font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed">Zurück</button>
+                                <div class="font-bold text-gold-400 w-24 text-center" id="stepIndicator4">Schritt 0/5</div>
+                                <button id="btnNext4" class="flex-1 py-2 bg-[#8b6b4a] hover:bg-[#a3805b] text-white rounded-lg font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed">Nächster</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600 mt-8">
+                        <h3 class="text-2xl font-bold text-creme-100 mb-6">Gerade aus zwei Punkten bestimmen</h3>
+                        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-center">
+                            <div class="lg:col-span-3">
+                                <p class="text-creme-200 mb-4">Oft sind zwei Punkte $P$ und $Q$ gegeben, und du sollst die Geradengleichung aufstellen.</p>
+                                <div class="bg-mocha-900 p-5 rounded-xl border border-mocha-600 space-y-4">
+                                    <div class="flex gap-4">
+                                        <div class="w-8 h-8 rounded-full bg-mocha-700 text-white flex items-center justify-center font-bold flex-shrink-0">1</div>
+                                        <div>
+                                            <strong class="text-white">Stützvektor wählen:</strong> Nimm den Ortsvektor eines der beiden Punkte, z.B. $\\vec{p}$.
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-4">
+                                        <div class="w-8 h-8 rounded-full bg-mocha-700 text-white flex items-center justify-center font-bold flex-shrink-0">2</div>
+                                        <div>
+                                            <strong class="text-white">Richtungsvektor berechnen:</strong> Bilde den Verbindungsvektor zwischen beiden Punkten: $\\vec{u} = \\vec{PQ} = \\vec{q} - \\vec{p}$.
+                                        </div>
+                                    </div>
+                                    <div class="bg-amber-900/30 border-l-4 border-amber-500 p-4 rounded-r-lg mt-2 text-center font-bold text-gold-300 math-box">
+                                        $$g: \\vec{x} = \\vec{p} + r \\cdot (\\vec{q} - \\vec{p})$$
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="lg:col-span-2 relative bg-mocha-900 rounded-xl overflow-hidden border border-mocha-600 w-full aspect-square shadow-inner">
+                                <canvas id="lineTwoPointsCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+                                <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-2 px-4 z-10">
+                                     <button id="btnPrev4b" class="px-3 py-1 bg-mocha-700 hover:bg-mocha-600 text-sm text-creme-200 rounded transition-colors disabled:opacity-30 border border-mocha-500">Zurück</button>
+                                     <button id="btnNext4b" class="px-3 py-1 bg-[#8b6b4a] hover:bg-[#a3805b] text-sm text-white rounded transition-colors disabled:opacity-30">Weiter</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTopic7HTML() {
+            return `
+                <div class="max-w-5xl mx-auto animation-fade-in">
+                    <div class="mb-8">
+                        <span class="text-gold-400 font-bold tracking-wider text-sm uppercase">Thema 7</span>
+                        <h2 class="text-3xl md:text-4xl font-extrabold text-creme-100 mt-2">Lagebeziehungen zwischen Geraden</h2>
+                    </div>
+
+                    <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600 mb-8">
+                        <p class="text-lg text-creme-200 mb-6">Zwei Geraden im 3D-Raum können genau vier verschiedene Lagebeziehungen zueinander haben. Der systematische Prüfalgorithmus erfolgt in zwei Hauptschritten.</p>
+                        
+                        <div class="bg-mocha-900 p-6 rounded-xl border border-mocha-600 overflow-x-auto">
+                            <div class="min-w-[600px] flex flex-col items-center">
+                                <div class="bg-mocha-700 text-white font-bold py-2 px-6 rounded-lg mb-4 border border-mocha-500">Sind die Richtungsvektoren kollinear? (k-Prüfung)</div>
+                                
+                                <div class="flex w-full justify-around relative">
+                                    <div class="absolute top-0 left-1/4 w-1/2 h-8 border-t-2 border-l-2 border-r-2 border-mocha-500 rounded-t-lg -mt-4"></div>
+                                    
+                                    <!-- JA Ast -->
+                                    <div class="flex flex-col items-center w-1/2 mt-4 px-4 border-r border-mocha-600/50">
+                                        <div class="bg-green-900/40 text-green-400 font-bold py-1 px-4 rounded border border-green-800/50 mb-4">JA (parallel)</div>
+                                        <div class="text-sm text-creme-200 text-center mb-4">Liegt der Stützpunkt von h auf g? <br>(Punktprobe)</div>
+                                        
+                                        <div class="flex w-full justify-between mt-2 text-center text-sm gap-2">
+                                            <div class="bg-mocha-800 p-3 rounded-lg border border-mocha-600 w-1/2">
+                                                <strong class="text-green-300 block mb-1">JA</strong>
+                                                Identisch<br>(g = h)
+                                            </div>
+                                            <div class="bg-mocha-800 p-3 rounded-lg border border-mocha-600 w-1/2">
+                                                <strong class="text-red-300 block mb-1">NEIN</strong>
+                                                Echt parallel<br>(g || h)
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- NEIN Ast -->
+                                    <div class="flex flex-col items-center w-1/2 mt-4 px-4">
+                                        <div class="bg-red-900/40 text-red-400 font-bold py-1 px-4 rounded border border-red-800/50 mb-4">NEIN (nicht parallel)</div>
+                                        <div class="text-sm text-creme-200 text-center mb-4">Gleichsetzen: g = h <br>(LGS lösen)</div>
+                                        
+                                        <div class="flex w-full justify-between mt-2 text-center text-sm gap-2">
+                                            <div class="bg-mocha-800 p-3 rounded-lg border border-mocha-600 w-1/2">
+                                                <strong class="text-green-300 block mb-1">Lösbar</strong>
+                                                Schnittpunkt
+                                            </div>
+                                            <div class="bg-mocha-800 p-3 rounded-lg border border-mocha-600 w-1/2">
+                                                <strong class="text-red-300 block mb-1">Unlösbar</strong>
+                                                Windschief
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-mocha-800 p-5 rounded-xl border border-mocha-600 shadow-lg">
+                            <h4 class="font-bold text-white mb-2 text-lg">1. Identisch</h4>
+                            <p class="text-creme-200 text-sm">Die Geraden liegen exakt aufeinander. Richtungsvektoren sind Vielfache voneinander UND ein Aufpunkt der einen liegt auf der anderen.</p>
+                        </div>
+                        <div class="bg-mocha-800 p-5 rounded-xl border border-mocha-600 shadow-lg">
+                            <h4 class="font-bold text-white mb-2 text-lg">2. Echt parallel</h4>
+                            <p class="text-creme-200 text-sm">Verlaufen wie Eisenbahnschienen. Richtungsvektoren sind Vielfache voneinander, aber die Geraden haben keinen gemeinsamen Punkt.</p>
+                        </div>
+                        <div class="bg-mocha-800 p-5 rounded-xl border border-mocha-600 shadow-lg">
+                            <h4 class="font-bold text-white mb-2 text-lg">3. Schnittpunkt</h4>
+                            <p class="text-creme-200 text-sm">Richtungen sind verschieden. Sie treffen sich in genau einem Punkt (das LGS beim Gleichsetzen hat eine eindeutige Lösung).</p>
+                        </div>
+                        <div class="bg-mocha-800 p-5 rounded-xl border border-mocha-600 shadow-lg relative overflow-hidden">
+                            <div class="absolute right-0 top-0 w-16 h-16 bg-red-500/10 rounded-bl-full"></div>
+                            <h4 class="font-bold text-white mb-2 text-lg relative z-10">4. Windschief (Nur in 3D!)</h4>
+                            <p class="text-creme-200 text-sm relative z-10">Sie kreuzen sich auf verschiedenen Ebenen, ohne sich jemals zu berühren. Richtungen sind verschieden UND das LGS hat keinen Schnittpunkt.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTopic8HTML() {
+            return `
+                <div class="max-w-5xl mx-auto animation-fade-in">
+                    <div class="mb-8">
+                        <span class="text-gold-400 font-bold tracking-wider text-sm uppercase">Thema 8</span>
+                        <h2 class="text-3xl md:text-4xl font-extrabold text-creme-100 mt-2">Die Ebene in Parameterform</h2>
+                    </div>
+
+                    <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600 mb-8">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                            <div>
+                                <h3 class="text-2xl font-bold text-creme-100 mb-4">Das flache Blatt im Raum</h3>
+                                <p class="text-creme-200 mb-4">Eine Ebene ist eine flache, unendlich ausgedehnte Fläche im Raum. Um sie zu beschreiben, brauchen wir eine Dimension mehr als bei der Geraden.</p>
+                                
+                                <div class="bg-mocha-900 border border-mocha-600 p-5 rounded-xl mb-6 relative overflow-hidden text-center text-xl font-bold text-gold-300 tracking-widest shadow-inner math-box">
+                                    $$E: \\vec{x} = \\vec{p} + r \\cdot \\vec{u} + s \\cdot \\vec{v}$$
+                                </div>
+                                
+                                <p class="text-creme-200 text-sm mb-2"><strong class="text-white">Bedingung:</strong> Die beiden <strong class="text-white">Spannvektoren</strong> $\\vec{u}$ und $\\vec{v}$ dürfen <strong class="text-red-400">nicht kollinear</strong> sein! Wären sie es, würden sie nur eine Linie aufspannen, keine Fläche.</p>
+                            </div>
+
+                            <div class="bg-mocha-900 border border-mocha-600 rounded-2xl p-4 shadow-lg flex flex-col items-center h-full">
+                                <h3 class="w-full text-center font-bold text-creme-200 mb-4">Ebene aufspannen</h3>
+                                <div class="relative bg-mocha-800 rounded-xl overflow-hidden border border-mocha-500 w-full aspect-[4/3] shadow-inner">
+                                    <canvas id="planeCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+                                </div>
+                                <div class="mt-4 flex items-center gap-3 w-full">
+                                    <button id="btnPrev5" class="flex-1 py-1.5 bg-mocha-700 border border-mocha-600 hover:bg-mocha-600 text-creme-200 rounded font-medium transition-colors disabled:opacity-30">Zurück</button>
+                                    <button id="btnNext5" class="flex-1 py-1.5 bg-[#8b6b4a] hover:bg-[#a3805b] text-white rounded font-medium transition-colors disabled:opacity-30">Weiter</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTopic9HTML() {
+            return `
+                <div class="max-w-5xl mx-auto animation-fade-in">
+                    <div class="mb-8">
+                        <span class="text-gold-400 font-bold tracking-wider text-sm uppercase">Thema 9</span>
+                        <h2 class="text-3xl md:text-4xl font-extrabold text-creme-100 mt-2">Lineare Gleichungssysteme (LGS)</h2>
+                    </div>
+
+                    <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600 mb-8">
+                        <p class="text-lg text-creme-200 mb-6">Viele Probleme in der Vektorrechnung (Schnittpunkte, Punktproben) führen auf ein Lineares Gleichungssystem: Meistens 3 Gleichungen (für x, y, z) und 2 oder 3 Unbekannte (Parameter wie r, s, t).</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="bg-mocha-900 p-6 rounded-xl border border-mocha-600 shadow-inner">
+                                <h4 class="font-bold text-gold-400 mb-4">Das Gauß-Verfahren (Additionsverfahren)</h4>
+                                <p class="text-sm text-creme-200 mb-4">Das Ziel ist es, das System in eine <strong class="text-white">Stufenform</strong> zu bringen. Erlaubte Operationen:</p>
+                                <ul class="list-disc pl-5 text-sm text-creme-200 space-y-2 mb-4">
+                                    <li>Gleichungen vertauschen</li>
+                                    <li>Gleichungen mit einer Zahl (≠0) multiplizieren</li>
+                                    <li>Ein Vielfaches einer Gleichung zu einer anderen addieren/subtrahieren</li>
+                                </ul>
+                                <div class="font-mono text-xs text-mocha-300 bg-mocha-800 p-3 rounded">
+                                    I:  2r + 3s = 5<br>
+                                    II: 4r - 1s = 3  | II - 2*I<br>
+                                    ----------------<br>
+                                    I:  2r + 3s = 5<br>
+                                    II:  0 - 7s = -7 &rarr; s = 1
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col gap-4">
+                                <h4 class="font-bold text-white">Lösungsmengen interpretieren</h4>
+                                
+                                <div class="bg-green-900/20 border-l-4 border-green-500 p-4 rounded-r-lg">
+                                    <strong class="text-green-400 block text-sm">Genau eine Lösung</strong>
+                                    <p class="text-xs text-creme-200 mt-1">Gauß geht perfekt auf (z.B. $r=1, s=2$).<br>&rarr; Geometrisch: <strong class="text-white">Schnittpunkt</strong> existiert.</p>
+                                </div>
+                                
+                                <div class="bg-red-900/20 border-l-4 border-red-500 p-4 rounded-r-lg">
+                                    <strong class="text-red-400 block text-sm">Keine Lösung (Widerspruch)</strong>
+                                    <p class="text-xs text-creme-200 mt-1">Es entsteht eine falsche Aussage (z.B. $0 = 5$).<br>&rarr; Geometrisch: <strong class="text-white">Windschief / Echt parallel</strong> (kein Schnittpunkt).</p>
+                                </div>
+                                
+                                <div class="bg-blue-900/20 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                                    <strong class="text-blue-400 block text-sm">Unendlich viele Lösungen</strong>
+                                    <p class="text-xs text-creme-200 mt-1">Eine Zeile fällt weg (z.B. $0 = 0$).<br>&rarr; Geometrisch: <strong class="text-white">Identisch</strong> (liegen aufeinander).</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTopic10HTML() {
+            return `
+                <div class="max-w-5xl mx-auto animation-fade-in">
+                    <div class="mb-8">
+                        <span class="text-gold-400 font-bold tracking-wider text-sm uppercase">Thema 10</span>
+                        <h2 class="text-3xl md:text-4xl font-extrabold text-creme-100 mt-2">Lagebeziehung: Gerade & Ebene</h2>
+                    </div>
+
+                    <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600 mb-8">
+                        <p class="text-lg text-creme-200 mb-6">Eine Gerade kann eine Ebene durchstoßen, parallel zu ihr liegen oder komplett in ihr enthalten sein. Das Prinzip zur Überprüfung ist immer das Gleiche: <strong class="text-white">Gleichsetzen!</strong></p>
+                        
+                        <div class="bg-amber-900/30 border-l-4 border-amber-500 p-6 rounded-r-xl mb-8 border-y border-r border-amber-500/30">
+                            <div class="text-xl text-center font-bold text-gold-300">
+                                $$g = E$$
+                                $$\\vec{p}_g + r \\cdot \\vec{u} = \\vec{p}_E + s \\cdot \\vec{v} + t \\cdot \\vec{w}$$
+                            </div>
+                            <p class="text-center text-sm text-creme-200 mt-3">Dies führt auf ein LGS mit 3 Gleichungen und 3 Unbekannten (r, s, t).</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="bg-mocha-900 p-5 rounded-xl border border-mocha-600 flex flex-col h-full shadow-inner">
+                                <div class="w-12 h-12 bg-green-900/50 rounded-full flex items-center justify-center mb-4 border border-green-800/50">
+                                    <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                                </div>
+                                <h4 class="font-bold text-white mb-2">1. Durchstoßpunkt</h4>
+                                <p class="text-sm text-creme-200 flex-1">Das LGS hat <strong class="text-green-300">genau eine Lösung</strong>. Setzt man den gefundenen Parameter $r$ in die Geradengleichung ein, erhält man den Ortsvektor des Durchstoßpunktes.</p>
+                            </div>
+
+                            <div class="bg-mocha-900 p-5 rounded-xl border border-mocha-600 flex flex-col h-full shadow-inner">
+                                <div class="w-12 h-12 bg-blue-900/50 rounded-full flex items-center justify-center mb-4 border border-blue-800/50">
+                                    <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
+                                </div>
+                                <h4 class="font-bold text-white mb-2">2. Echt parallel</h4>
+                                <p class="text-sm text-creme-200 flex-1">Das LGS führt zu einem <strong class="text-blue-300">Widerspruch</strong> (z.B. $0 = 5$). Die Gerade verläuft parallel über oder unter der Ebene, sie treffen sich nie.</p>
+                            </div>
+
+                            <div class="bg-mocha-900 p-5 rounded-xl border border-mocha-600 flex flex-col h-full shadow-inner">
+                                <div class="w-12 h-12 bg-indigo-900/50 rounded-full flex items-center justify-center mb-4 border border-indigo-800/50">
+                                    <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                                </div>
+                                <h4 class="font-bold text-white mb-2">3. g liegt in E</h4>
+                                <p class="text-sm text-creme-200 flex-1">Das LGS liefert <strong class="text-indigo-300">unendlich viele Lösungen</strong> (z.B. Nullzeile $0 = 0$). Die Gerade liegt komplett auf dem "Blatt Papier".</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTopic11HTML() {
+            return `
+                <div class="max-w-5xl mx-auto animation-fade-in">
+                    <div class="mb-8">
+                        <span class="text-gold-400 font-bold tracking-wider text-sm uppercase">Thema 11</span>
+                        <h2 class="text-3xl md:text-4xl font-extrabold text-creme-100 mt-2">Das Skalarprodukt</h2>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                        <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600">
+                            <h3 class="text-2xl font-bold text-creme-100 mb-4">Ein Skalar als Ergebnis</h3>
+                            <p class="text-creme-200 mb-4">Multipliziert man zwei Vektoren über das <strong class="text-white">Skalarprodukt</strong> (geschrieben mit einem Punkt $\\cdot$ oder $\\circ$), so entsteht <strong class="text-gold-300">kein neuer Vektor</strong>, sondern eine normale Zahl (ein Skalar).</p>
+                            
+                            <div class="bg-amber-900/30 border-l-4 border-amber-500 p-5 rounded-r-xl mb-6 text-center text-lg font-bold text-gold-300 border-y border-r border-amber-500/30">
+                                $$\\vec{a} \\cdot \\vec{b} = a_1 \\cdot b_1 + a_2 \\cdot b_2 + a_3 \\cdot b_3$$
+                            </div>
+                            
+                            <div class="bg-mocha-900 p-4 rounded-xl border border-mocha-600">
+                                <h4 class="font-bold text-white mb-2 text-sm uppercase tracking-wider">Orthogonalität prüfen</h4>
+                                <p class="text-sm text-creme-200">Der wichtigste Anwendungsfall: Zwei Vektoren stehen genau dann <strong class="text-red-400">senkrecht (orthogonal)</strong> aufeinander, wenn ihr Skalarprodukt Null ist.</p>
+                                <div class="text-center font-bold text-red-400 mt-2 bg-red-900/20 py-2 rounded">
+                                    $$\\vec{a} \\perp \\vec{b} \\iff \\vec{a} \\cdot \\vec{b} = 0$$
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600 flex flex-col">
+                            <h3 class="text-2xl font-bold text-creme-100 mb-4">Was bedeutet der Wert?</h3>
+                            <p class="text-creme-200 text-sm mb-6">Geometrisch berechnet das Skalarprodukt: "Wie viel von Vektor $\\vec{b}$ zeigt in die gleiche Richtung wie Vektor $\\vec{a}$, multipliziert mit der Länge von $\\vec{a}$." Es hängt also direkt mit dem Winkel $\\alpha$ zwischen den Vektoren zusammen:</p>
+                            
+                            <div class="relative bg-mocha-900 rounded-xl overflow-hidden border border-mocha-600 w-full aspect-video shadow-inner mb-4">
+                                <canvas id="dotProductCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+                            </div>
+                            
+                            <div class="text-center text-sm text-mocha-300 italic mt-auto">
+                                Liegt der Winkel über 90°, zeigt die Projektion in die Gegenrichtung und das Skalarprodukt wird negativ.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTopic12HTML() {
+            return `
+                <div class="max-w-5xl mx-auto animation-fade-in">
+                    <div class="mb-8">
+                        <span class="text-gold-400 font-bold tracking-wider text-sm uppercase">Thema 12</span>
+                        <h2 class="text-3xl md:text-4xl font-extrabold text-creme-100 mt-2">Winkel zwischen Geraden</h2>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-center">
+                        <div class="lg:col-span-3 bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600">
+                            <p class="text-lg text-creme-200 mb-6">Schneiden sich zwei Geraden $g$ und $h$, so schließen sie einen Winkel $\\alpha$ einschließen. Da sie zwei Winkel bilden (einen spitzen und einen stumpfen), ist in der Mathematik <strong class="text-white">immer der kleinere Winkel</strong> (also $\\alpha \\le 90^\\circ$) gesucht.</p>
+                            
+                            <div class="bg-amber-900/30 border-l-4 border-amber-500 p-6 rounded-r-xl mb-6 border-y border-r border-amber-500/30">
+                                <div class="text-xl md:text-2xl text-center font-bold text-gold-300 math-box">
+                                    $$\\cos(\\alpha) = \\frac{|\\vec{u} \\cdot \\vec{v}|}{|\\vec{u}| \\cdot |\\vec{v}|}$$
+                                </div>
+                            </div>
+
+                            <ul class="space-y-4 text-sm text-creme-200">
+                                <li class="flex items-start">
+                                    <span class="text-gold-400 font-bold mr-2 text-base">1.</span>
+                                    <span>Man benötigt <strong class="text-white">nur die Richtungsvektoren</strong> $\\vec{u}$ und $\\vec{v}$ der beiden Geraden. Stützvektoren sind irrelevant.</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="text-gold-400 font-bold mr-2 text-base">2.</span>
+                                    <span>Der Betragstrich $|\\dots|$ im Zähler um das Skalarprodukt sorgt dafür, dass das Ergebnis positiv wird (wodurch der Taschenrechner automatisch den spitzen Winkel ausgibt).</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="text-gold-400 font-bold mr-2 text-base">3.</span>
+                                    <span>Am Ende rechnet man mit dem Taschenrechner <strong class="text-white">$\\cos^{-1}$ (bzw. $\\arccos$)</strong>, um den Winkel $\\alpha$ zu erhalten.</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="lg:col-span-2 bg-mocha-800 border border-mocha-600 rounded-2xl p-4 shadow-lg flex justify-center items-center h-full">
+                             <div class="relative w-full aspect-square bg-mocha-900 rounded-xl overflow-hidden border border-mocha-500 shadow-inner">
+                                 <canvas id="angleLinesCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTopic13HTML() {
+            return `
+                <div class="max-w-5xl mx-auto animation-fade-in">
+                    <div class="mb-8">
+                        <span class="text-gold-400 font-bold tracking-wider text-sm uppercase">Thema 13</span>
+                        <h2 class="text-3xl md:text-4xl font-extrabold text-creme-100 mt-2">Winkel: Gerade und Ebene</h2>
+                    </div>
+
+                    <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600 mb-8">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                            <div>
+                                <h3 class="text-2xl font-bold text-creme-100 mb-4">Besonderheit: Der Sinus!</h3>
+                                <p class="text-creme-200 mb-4">Sucht man den Schnittwinkel zwischen einer Geraden und einer Ebene, rechnet man normalerweise mit dem Richtungsvektor $\\vec{u}$ der Gerade und dem <strong class="text-white">Normalenvektor $\\vec{n}$</strong> der Ebene.</p>
+                                <p class="text-creme-200 mb-6"><strong>Aber Achtung:</strong> Der Normalenvektor steht bereits 90° senkrecht auf der Ebene! Wenn wir die normale Cosinus-Formel nutzen, würden wir den "falschen" Winkel berechnen (den zur Senkrechten). Um direkt den richtigen Winkel $\\alpha$ zur Ebene zu bekommen, tauschen wir in der Formel einfach $\\cos$ gegen $\\sin$ aus:</p>
+                                
+                                <div class="bg-amber-900/30 border-l-4 border-amber-500 p-5 rounded-r-xl border-y border-r border-amber-500/30">
+                                    <div class="text-xl md:text-2xl text-center font-bold text-gold-300 math-box">
+                                        $$\\sin(\\alpha) = \\frac{|\\vec{u} \\cdot \\vec{n}|}{|\\vec{u}| \\cdot |\\vec{n}|}$$
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-mocha-900 border border-mocha-600 rounded-2xl p-4 shadow-inner flex flex-col items-center h-full min-h-[300px] relative">
+                                <canvas id="anglePlaneCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTopic14HTML() {
+            return `
+                <div class="max-w-5xl mx-auto animation-fade-in">
+                    <div class="mb-8">
+                        <span class="text-gold-400 font-bold tracking-wider text-sm uppercase">Thema 14</span>
+                        <h2 class="text-3xl md:text-4xl font-extrabold text-creme-100 mt-2">Ebenen in Normalenform</h2>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                        <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600">
+                            <h3 class="text-2xl font-bold text-creme-100 mb-4">Ein neuer Blickwinkel</h3>
+                            <p class="text-creme-200 mb-6">Anstatt eine Ebene mit zwei Richtungen aufzuspannen (Parameterform), kann man sie auch dadurch definieren, was <strong class="text-red-400">senkrecht</strong> auf ihr steht.</p>
+                            
+                            <div class="bg-mocha-900 border border-mocha-600 p-5 rounded-xl mb-6 shadow-inner text-center">
+                                <strong class="text-white block mb-2 text-lg">Der Normalenvektor $\\vec{n}$</strong>
+                                <p class="text-sm text-creme-200">Ein Vektor, der genau 90° (orthogonal) auf der gesamten Ebene steht.</p>
+                            </div>
+
+                            <p class="text-creme-200 text-sm">Die Definition lautet: Für jeden Punkt $X$ der Ebene muss der Verbindungsvektor zum Aufpunkt $P$ (also $\\vec{x} - \\vec{p}$) senkrecht zum Normalenvektor $\\vec{n}$ stehen. Senkrecht bedeutet: Skalarprodukt = 0!</p>
+                            
+                            <div class="bg-amber-900/30 border-l-4 border-amber-500 p-5 rounded-r-xl mt-6 border-y border-r border-amber-500/30">
+                                <div class="text-xl text-center font-bold text-gold-300">
+                                    $$E: (\\vec{x} - \\vec{p}) \\cdot \\vec{n} = 0$$
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-6">
+                            <div class="bg-mocha-800 p-6 rounded-2xl shadow-lg border border-mocha-600">
+                                <h4 class="font-bold text-white mb-3">Wie findet man $\\vec{n}$?</h4>
+                                <p class="text-sm text-creme-200 mb-4">Wenn man die Parameterform hat ($E: \\vec{x} = \\vec{p} + r\\vec{u} + s\\vec{v}$), muss $\\vec{n}$ senkrecht zu $\\vec{u}$ UND senkrecht zu $\\vec{v}$ stehen. Man berechnet ihn mit dem <strong class="text-gold-300">Kreuzprodukt</strong>:</p>
+                                <div class="text-center font-bold text-white bg-mocha-900 p-3 rounded-lg border border-mocha-600">
+                                    $$\\vec{n} = \\vec{u} \\times \\vec{v}$$
+                                </div>
+                            </div>
+
+                            <div class="bg-mocha-800 p-6 rounded-2xl shadow-lg border border-mocha-600 flex-1 flex flex-col justify-center">
+                                <h4 class="font-bold text-white mb-3 flex items-center">
+                                    <svg class="w-5 h-5 mr-2 text-gold-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                    Vorteil der Normalenform
+                                </h4>
+                                <p class="text-sm text-creme-200">Die Normalenform ist parameterfrei! Man muss keine LGS mehr lösen, um z.B. zu prüfen, ob ein Punkt in der Ebene liegt. Man setzt den Punkt für $\\vec{x}$ ein, rechnet das Skalarprodukt aus. Kommt 0 raus: Er liegt drin. Wenn nicht: Dann nicht.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTopic15HTML() {
+            return `
+                <div class="max-w-5xl mx-auto animation-fade-in">
+                    <div class="mb-8">
+                        <span class="text-gold-400 font-bold tracking-wider text-sm uppercase">Thema 15</span>
+                        <h2 class="text-3xl md:text-4xl font-extrabold text-creme-100 mt-2">Ebenen in Koordinatenform</h2>
+                    </div>
+
+                    <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600 mb-8">
+                        <h3 class="text-2xl font-bold text-creme-100 mb-4">Die beste Form zum Rechnen</h3>
+                        <p class="text-lg text-creme-200 mb-6">Multipliziert man die Normalenform $(\\vec{x} - \\vec{p}) \\cdot \\vec{n} = 0$ mithilfe des Skalarprodukts komplett aus, verschwinden die Vektoren. Übrig bleibt eine einfache lineare Gleichung mit $x_1, x_2, x_3$.</p>
+                        
+                        <div class="bg-amber-900/30 border-l-4 border-amber-500 p-6 rounded-r-xl mb-8 border-y border-r border-amber-500/30 w-full max-w-2xl mx-auto">
+                            <div class="text-2xl text-center font-bold text-gold-300">
+                                $$E: n_1 \\cdot x_1 + n_2 \\cdot x_2 + n_3 \\cdot x_3 = d$$
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="p-5 border border-mocha-600 rounded-xl bg-mocha-900">
+                                <h4 class="font-bold text-white mb-2 text-red-400">Der Normalenvektor ist direkt ablesbar!</h4>
+                                <p class="text-sm text-creme-200">Die Vorfaktoren vor den $x$-Variablen bilden exakt den Normalenvektor der Ebene. <br>Beispiel: $E: 2x_1 - 4x_2 + 3x_3 = 8$ <br>&rarr; $\\vec{n} = \\begin{pmatrix} 2 \\\\ -4 \\\\ 3 \\end{pmatrix}$</p>
+                            </div>
+                            
+                            <div class="p-5 border border-mocha-600 rounded-xl bg-mocha-900">
+                                <h4 class="font-bold text-white mb-2">Wie bestimmt das "d"?</h4>
+                                <p class="text-sm text-creme-200">Setze einfach den Aufpunkt (Stützvektor) $\\vec{p}$ der Ebene in die linke Seite der Gleichung ein. Das Ergebnis ist dein $d$. (Mathematisch: $d = \\vec{n} \\cdot \\vec{p}$)</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTopic16HTML() {
+            return `
+                <div class="max-w-5xl mx-auto animation-fade-in">
+                    <div class="mb-8">
+                        <span class="text-gold-400 font-bold tracking-wider text-sm uppercase">Thema 16</span>
+                        <h2 class="text-3xl md:text-4xl font-extrabold text-creme-100 mt-2">Spurpunkte von Ebenen</h2>
+                    </div>
+
+                    <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600 mb-8">
+                        <p class="text-lg text-creme-200 mb-6">Die <strong class="text-white">Spurpunkte</strong> (Schnittpunkte mit den drei Koordinatenachsen) sind das beste Werkzeug, um eine Ebene im Koordinatensystem einzuzeichnen. Das Prinzip ist simpel: Wenn ein Punkt auf einer Achse liegt, müssen die Werte der beiden anderen Achsen automatisch Null sein!</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                            <div class="bg-blue-900/30 border border-blue-700/50 rounded-xl p-5">
+                                <h4 class="text-blue-300 font-bold mb-2">Spurpunkt X-Achse ($S_1$)</h4>
+                                <p class="text-sm text-creme-200 mb-2">Um den Schnittpunkt mit der $x_1$-Achse zu finden, setze die <strong class="text-white">$x_2$- und $x_3$-Koordinate auf Null</strong>.</p>
+                            </div>
+                            <div class="bg-green-900/30 border border-green-700/50 rounded-xl p-5">
+                                <h4 class="text-green-300 font-bold mb-2">Spurpunkt Y-Achse ($S_2$)</h4>
+                                <p class="text-sm text-creme-200 mb-2">Um den Schnittpunkt mit der $x_2$-Achse zu finden, setze die <strong class="text-white">$x_1$- und $x_3$-Koordinate auf Null</strong>.</p>
+                            </div>
+                            <div class="bg-red-900/30 border border-red-700/50 rounded-xl p-5 md:col-span-2 lg:col-span-1">
+                                <h4 class="text-red-300 font-bold mb-2">Spurpunkt Z-Achse ($S_3$)</h4>
+                                <p class="text-sm text-creme-200 mb-2">Um den Schnittpunkt mit der $x_3$-Achse zu finden, setze die <strong class="text-white">$x_1$- und $x_2$-Koordinate auf Null</strong>.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Interaktives Beispiel -->
+                    <div class="grid grid-cols-1 xl:grid-cols-5 gap-8 items-start">
+                        <div class="xl:col-span-2 space-y-4">
+                            <div class="bg-mocha-800 p-6 rounded-2xl border border-mocha-600 h-full shadow-lg">
+                                <h4 class="text-xl font-bold text-white mb-4">Beispielrechnung</h4>
+                                <p class="text-creme-200 text-sm mb-4">Gegeben sei die Ebene <strong class="text-white">E: 2$x_1$ + 3$x_2$ + $x_3$ = 6</strong></p>
+                                
+                                <div id="stepExplanations9" class="space-y-3">
+                                    <div class="step-card9 bg-mocha-900 p-3 rounded-xl border-l-4 border-mocha-600 transition-all duration-300 opacity-40" data-step="1">
+                                        <strong class="text-blue-400 block mb-1">1. Schnittpunkt $x_1$-Achse</strong>
+                                        <span class="text-xs text-creme-200 block mb-1">Wir setzen $x_2 = 0$ und $x_3 = 0$:</span>
+                                        <div class="font-mono text-sm bg-mocha-800 p-2 rounded border border-mocha-600 text-white">
+                                            2x₁ = 6 &rArr; x₁ = 3 <br><strong class="text-gold-300">S₁(3 | 0 | 0)</strong>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="step-card9 bg-mocha-900 p-3 rounded-xl border-l-4 border-mocha-600 transition-all duration-300 opacity-40" data-step="2">
+                                        <strong class="text-green-400 block mb-1">2. Schnittpunkt $x_2$-Achse</strong>
+                                        <span class="text-xs text-creme-200 block mb-1">Wir setzen $x_1 = 0$ und $x_3 = 0$:</span>
+                                        <div class="font-mono text-sm bg-mocha-800 p-2 rounded border border-mocha-600 text-white">
+                                            3x₂ = 6 &rArr; x₂ = 2 <br><strong class="text-gold-300">S₂(0 | 2 | 0)</strong>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="step-card9 bg-mocha-900 p-3 rounded-xl border-l-4 border-mocha-600 transition-all duration-300 opacity-40" data-step="3">
+                                        <strong class="text-red-400 block mb-1">3. Schnittpunkt $x_3$-Achse</strong>
+                                        <span class="text-xs text-creme-200 block mb-1">Wir setzen $x_1 = 0$ und $x_2 = 0$:</span>
+                                        <div class="font-mono text-sm bg-mocha-800 p-2 rounded border border-mocha-600 text-white">
+                                            1x₃ = 6 &rArr; x₃ = 6 <br><strong class="text-gold-300">S₃(0 | 0 | 6)</strong>
+                                        </div>
+                                    </div>
+
+                                    <div class="step-card9 bg-mocha-900 p-3 rounded-xl border-l-4 border-mocha-600 transition-all duration-300 opacity-40" data-step="4">
+                                        <strong class="text-creme-100 block mb-1">4. Das Spurdreieck</strong>
+                                        <span class="text-xs text-creme-200">Verbindet man die drei Spurpunkte, entsteht das <strong class="text-white">Spurdreieck</strong>. Die Verbindungsstrecken sind die Spurlinien: Die Schnittgeraden der Ebene mit den Koordinatenebenen ("Wänden").</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="xl:col-span-3 bg-mocha-800 border border-mocha-600 rounded-2xl p-4 shadow-lg flex flex-col items-center">
+                            <h3 class="w-full text-center font-bold text-creme-200 mb-4">Das Spurdreieck der Ebene</h3>
+                            <div class="relative bg-mocha-900 rounded-xl overflow-hidden border border-mocha-600 w-full max-w-[600px] aspect-[5/4] mx-auto">
+                                <canvas id="tracePointsCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+                            </div>
+                            
+                            <div class="mt-6 flex items-center gap-4 w-full justify-center bg-mocha-900 p-3 rounded-lg border border-mocha-600 max-w-[600px]">
+                                <button id="btnPrev9" class="px-4 py-2 bg-mocha-800 border border-mocha-500 hover:bg-mocha-700 text-creme-200 rounded-lg font-medium transition-colors disabled:opacity-30">Zurück</button>
+                                <div class="font-bold text-gold-400 w-24 text-center bg-mocha-800 border border-mocha-500 py-1.5 rounded-lg text-sm" id="stepIndicator9">Schritt 0/4</div>
+                                <button id="btnNext9" class="px-4 py-2 bg-[#8b6b4a] hover:bg-[#a3805b] text-white rounded-lg font-medium transition-colors disabled:opacity-30">Nächster</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getTopic17HTML() {
+            return `
+                <div class="max-w-5xl mx-auto animation-fade-in">
+                    <div class="mb-8">
+                        <span class="text-gold-400 font-bold tracking-wider text-sm uppercase">Thema 17</span>
+                        <h2 class="text-3xl md:text-4xl font-extrabold text-creme-100 mt-2">Abstandsprobleme</h2>
+                    </div>
+
+                    <p class="text-lg text-creme-200 mb-8">In der Vektorgeometrie gibt es drei klassische Abstandsprobleme: Punkt-Ebene, Punkt-Gerade und der Abstand zwischen windschiefen Geraden. Alle bauen auf ähnlichen Prinzipien auf.</p>
+
+                    <!-- A: Abstand Punkt - Ebene -->
+                    <div class="mb-12">
+                        <h3 class="text-2xl font-bold text-white mb-6 border-b border-mocha-600 pb-2">A. Abstand Punkt zur Ebene</h3>
+                        
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch mb-8">
+                            <div class="bg-mocha-800 p-6 rounded-2xl shadow-lg border border-mocha-600 flex flex-col justify-center">
+                                <h4 class="text-xl font-bold text-gold-400 mb-3">Das Lotfußpunktverfahren</h4>
+                                <div class="bg-mocha-900 p-4 rounded-xl border-l-4 border-gold-500 mb-4 shadow-inner">
+                                    <strong class="text-white block mb-1">Die Kernidee:</strong>
+                                    <p class="text-sm text-creme-200">Der kürzeste Abstand eines Punktes zu einer Ebene ist immer die senkrechte Verbindung. Dieser Abstand ist also ein Teil einer Geraden (der <em>Lotgeraden</em>), die senkrecht auf der Ebene steht und durch den Punkt $P$ geht.</p>
+                                </div>
+                                
+                                <p class="text-creme-200 text-sm mb-4 font-bold">Vorgehen anhand der Zeichnung:</p>
+                                <ul class="space-y-3 text-sm text-creme-200 list-decimal pl-5">
+                                    <li><strong class="text-white">Lotgerade $h$ aufstellen:</strong> Der Stützvektor ist der Punkt $P$. Der Richtungsvektor ist der Normalenvektor $\\vec{n}$ der Ebene (ggf. vorher berechnen).</li>
+                                    <li><strong class="text-white">Gerade mit Ebene schneiden:</strong> Schneide die Hilfsgerade $h$ mit der Ebene $E$, um den Durchstoßpunkt (Lotfußpunkt $F$) zu finden. <br><em class="text-mocha-400 text-xs">(Tipp: Wenn $E$ noch in Parameterform ist, bringe sie zuerst in die Koordinatenform, das macht den Schnittpunkt viel leichter zu berechnen!)</em></li>
+                                    <li><strong class="text-white">Abstand berechnen:</strong> Der Abstand ist exakt die Länge des Verbindungsvektors zwischen dem Schnittpunkt $F$ und dem Originalpunkt $P$, also $d = |\\vec{PF}|$.</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-mocha-800 border border-mocha-600 rounded-2xl p-4 shadow-lg flex flex-col items-center">
+                                <h4 class="font-bold text-creme-200 mb-2">Die anschauliche Idee</h4>
+                                <div class="relative w-full flex-1 min-h-[300px] bg-mocha-900 rounded-xl overflow-hidden border border-mocha-500 shadow-inner">
+                                    <canvas id="distPlaneCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- NEW SECTION: HNF -->
+                        <div class="bg-mocha-800 p-6 md:p-8 rounded-2xl shadow-lg border border-mocha-600">
+                            <h4 class="text-xl font-bold text-amber-500 mb-4">Alternative: Hesse'sche Normalenform (HNF)</h4>
+                            
+                            <div class="bg-mocha-900 p-5 rounded-xl border-l-4 border-amber-500 mb-6 shadow-inner">
+                                <strong class="text-white block mb-2 text-lg">Die Kernidee: Skalarprodukt als Projektion</strong>
+                                <p class="text-sm text-creme-200">Der Abstand lässt sich auch extrem elegant direkt über das Skalarprodukt berechnen: Man nimmt den Verbindungsvektor von einem beliebigen Punkt der Ebene (dem Aufpunkt $A$) zum Punkt $P$. Diesen multipliziert man skalar mit dem <strong class="text-white">normierten Normalenvektor $\\vec{n}_0$</strong>.</p>
+                                <p class="text-sm text-creme-200 mt-2">Warum? Das Skalarprodukt misst exakt, wie weit dieser Verbindungsvektor in die senkrechte Richtung der Ebene zeigt. Damit der berechnete Wert direkt der wahren Distanz entspricht und nicht durch die Länge des Normalenvektors verzerrt wird, <em>muss</em> der Normalenvektor vorher auf die Länge 1 gestaucht werden (normiert werden).</p>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                <div class="bg-amber-900/20 p-5 rounded-xl border border-amber-500/30">
+                                    <h5 class="text-amber-400 font-bold mb-3">1. In der Normalenform</h5>
+                                    <p class="text-sm text-creme-200 mb-3">Anstelle der $= 0$ der Ebenengleichung tritt der Abstand $d$. Alles steht in Betragsstrichen (da Distanzen nicht negativ sein können).</p>
+                                    <div class="text-center text-gold-300 font-bold math-box text-lg">
+                                        $$d = |(\\vec{p} - \\vec{a}) \\cdot \\vec{n}_0| \\quad \\text{mit} \\quad \\vec{n}_0 = \\frac{\\vec{n}}{|\\vec{n}|}$$
+                                    </div>
+                                </div>
+                                <div class="bg-amber-900/20 p-5 rounded-xl border border-amber-500/30">
+                                    <h5 class="text-amber-400 font-bold mb-3">2. In der Koordinatenform</h5>
+                                    <p class="text-sm text-creme-200 mb-3">Ausmultipliziert ist es oft am schnellsten: Linke Seite der Ebene durch die Länge von $\\vec{n}$ teilen und den Punkt $P$ einsetzen.</p>
+                                    <div class="text-center text-gold-300 font-bold math-box text-lg">
+                                        $$d = \\frac{|n_1 p_1 + n_2 p_2 + n_3 p_3 - c|}{\\sqrt{n_1^2 + n_2^2 + n_3^2}}$$
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-mocha-900 p-5 rounded-xl border border-mocha-600 space-y-4">
+                                <h5 class="font-bold text-white mb-2">Beispielrechnung zur Normalenform</h5>
+                                <p class="text-sm text-creme-200">Gegeben ist die Ebene $E: \\left( \\vec{x} - \\begin{pmatrix} 1 \\\\ 0 \\\\ 2 \\end{pmatrix} \\right) \\cdot \\begin{pmatrix} 2 \\\\ 2 \\\\ -1 \\end{pmatrix} = 0$ und der Punkt $P(5 | 2 | 4)$.</p>
+                                
+                                <div class="flex gap-4">
+                                    <div class="w-8 h-8 rounded-full bg-mocha-700 text-white flex items-center justify-center font-bold flex-shrink-0">1</div>
+                                    <div class="text-sm">
+                                        <strong class="text-white">Normalenvektor normieren:</strong><br>
+                                        Länge berechnen: $|\\vec{n}| = \\sqrt{2^2 + 2^2 + (-1)^2} = \\sqrt{4+4+1} = \\sqrt{9} = 3$<br>
+                                        Normierter Vektor: $\\vec{n}_0 = \\frac{1}{3} \\begin{pmatrix} 2 \\\\ 2 \\\\ -1 \\end{pmatrix}$
+                                    </div>
+                                </div>
+                                <div class="flex gap-4">
+                                    <div class="w-8 h-8 rounded-full bg-mocha-700 text-white flex items-center justify-center font-bold flex-shrink-0">2</div>
+                                    <div class="text-sm w-full">
+                                        <strong class="text-white">In die Formel einsetzen:</strong><br>
+                                        Wir ersetzen $\\vec{x}$ durch $\\vec{p}$ und berechnen den Wert in Betragsstrichen:
+                                        <div class="text-center font-bold text-gold-300 math-box mt-2 bg-mocha-800 p-3 rounded">
+                                            $$d = \\left| \\left( \\begin{pmatrix} 5 \\\\ 2 \\\\ 4 \\end{pmatrix} - \\begin{pmatrix} 1 \\\\ 0 \\\\ 2 \\end{pmatrix} \\right) \\cdot \\frac{1}{3} \\begin{pmatrix} 2 \\\\ 2 \\\\ -1 \\end{pmatrix} \\right|$$
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex gap-4">
+                                    <div class="w-8 h-8 rounded-full bg-mocha-700 text-white flex items-center justify-center font-bold flex-shrink-0">3</div>
+                                    <div class="text-sm w-full">
+                                        <strong class="text-white">Abstand ausrechnen:</strong><br>
+                                        <div class="text-center font-bold text-gold-300 math-box mt-2 bg-mocha-800 p-3 rounded">
+                                            $$d = \\frac{1}{3} \\cdot \\left| \\begin{pmatrix} 4 \\\\ 2 \\\\ 2 \\end{pmatrix} \\cdot \\begin{pmatrix} 2 \\\\ 2 \\\\ -1 \\end{pmatrix} \\right| = \\frac{1}{3} \\cdot | 4\\cdot2 + 2\\cdot2 + 2\\cdot(-1) | = \\frac{1}{3} \\cdot |8 + 4 - 2| = \\frac{10}{3}$$
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- B: Abstand Punkt - Gerade -->
+                    <div class="mb-12">
+                        <h3 class="text-2xl font-bold text-white mb-6 border-b border-mocha-600 pb-2">B. Abstand Punkt zur Geraden</h3>
+                        
+                        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-stretch">
+                            <div class="lg:col-span-3 bg-mocha-800 p-6 rounded-2xl shadow-lg border border-mocha-600">
+                                <p class="text-creme-200 mb-4">Hier wenden wir einen Trick an: Wir konstruieren eine künstliche <strong class="text-white">Hilfsebene</strong>, die als "Auffangnetz" für das Lot dient.</p>
+                                
+                                <div class="bg-mocha-900 p-5 rounded-xl border border-mocha-600 space-y-4">
+                                    <div class="flex gap-4">
+                                        <div class="w-8 h-8 rounded-full bg-mocha-700 text-white flex items-center justify-center font-bold flex-shrink-0">1</div>
+                                        <div class="text-sm">
+                                            <strong class="text-white">Hilfsebene $E_H$ aufstellen:</strong><br> 
+                                            Wir bauen eine Ebene in Koordinatenform/Normalenform. Der Aufpunkt ist der Punkt $P$. Der Normalenvektor der Ebene ist einfach der Richtungsvektor $\\vec{u}_g$ der Geraden! Dadurch steht $E_H$ exakt senkrecht auf der Gerade.
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-4">
+                                        <div class="w-8 h-8 rounded-full bg-mocha-700 text-white flex items-center justify-center font-bold flex-shrink-0">2</div>
+                                        <div class="text-sm">
+                                            <strong class="text-white">Schnittpunkt $F$ berechnen:</strong><br>
+                                            Wir schneiden die Ursprungsgerade $g$ mit der neuen Hilfsebene $E_H$. Da $E_H$ senkrecht zu $g$ ist, ist der Schnittpunkt exakt der Lotfußpunkt $F$.
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-4">
+                                        <div class="w-8 h-8 rounded-full bg-mocha-700 text-white flex items-center justify-center font-bold flex-shrink-0">3</div>
+                                        <div class="text-sm">
+                                            <strong class="text-white">Abstand berechnen:</strong><br>
+                                            Der minimale Abstand ist nun die Distanz zwischen $P$ und dem Fußpunkt $F$, also $d = |\\vec{PF}|$.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="lg:col-span-2 bg-mocha-800 border border-mocha-600 rounded-2xl p-4 shadow-lg flex flex-col items-center">
+                                <h4 class="font-bold text-creme-200 mb-2">Visualisierung: Punkt - Gerade</h4>
+                                <div class="relative w-full flex-1 min-h-[300px] bg-mocha-900 rounded-xl overflow-hidden border border-mocha-500 shadow-inner">
+                                    <canvas id="distLineCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- C: Abstand windschiefer Geraden -->
+                    <div>
+                        <h3 class="text-2xl font-bold text-white mb-6 border-b border-mocha-600 pb-2">C. Abstand windschiefer Geraden</h3>
+                        
+                        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-stretch">
+                            <div class="lg:col-span-2 bg-mocha-800 border border-mocha-600 rounded-2xl p-4 shadow-lg flex flex-col items-center order-2 lg:order-1">
+                                <h4 class="font-bold text-creme-200 mb-2">Visualisierung: Windschief</h4>
+                                <div class="relative w-full flex-1 min-h-[300px] bg-mocha-900 rounded-xl overflow-hidden border border-mocha-500 shadow-inner">
+                                    <canvas id="distSkewCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+                                </div>
+                            </div>
+
+                            <div class="lg:col-span-3 bg-mocha-800 p-6 rounded-2xl shadow-lg border border-mocha-600 order-1 lg:order-2">
+                                <p class="text-creme-200 mb-4">Zwei windschiefe Geraden $g$ und $h$ haben überall einen gewissen Abstand, aber es gibt genau eine Stelle, wo sie sich am nächsten kommen. Auch hier arbeiten wir mit einer Hilfsebene.</p>
+                                
+                                <div class="bg-mocha-900 p-5 rounded-xl border border-mocha-600 space-y-4">
+                                    <div class="flex gap-4">
+                                        <div class="w-8 h-8 rounded-full bg-mocha-700 text-white flex items-center justify-center font-bold flex-shrink-0">1</div>
+                                        <div class="text-sm">
+                                            <strong class="text-white">Hilfsebene $E_H$ aufstellen (Reduktion):</strong><br> 
+                                            Wir bilden eine Ebene, die die Gerade $g$ <strong class="italic">komplett enthält</strong> und zur Gerade $h$ <strong class="italic">parallel verläuft</strong>. 
+                                            <br>Dazu nutzen wir als Aufpunkt der Ebene den Stützvektor von $g$. Als Spannvektoren nutzen wir die Richtungsvektoren beider Geraden: $\\vec{u}_g$ und $\\vec{u}_h$.
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-4">
+                                        <div class="w-8 h-8 rounded-full bg-mocha-700 text-white flex items-center justify-center font-bold flex-shrink-0">2</div>
+                                        <div class="text-sm">
+                                            <strong class="text-white">Aufgabe vereinfacht:</strong><br>
+                                            Weil $h$ jetzt überall echt parallel zur Ebene $E_H$ verläuft, ist der Abstand von jedem Punkt auf $h$ zur Ebene genau der minimale Abstand der beiden Geraden.
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-4">
+                                        <div class="w-8 h-8 rounded-full bg-mocha-700 text-white flex items-center justify-center font-bold flex-shrink-0">3</div>
+                                        <div class="text-sm">
+                                            <strong class="text-white">Punkt-Ebene Abstand berechnen:</strong><br>
+                                            Nimm den Stützpunkt $P_h$ von $h$ und berechne seinen Abstand zur Ebene $E_H$ – am schnellsten geht das jetzt mit der Hesse'schen Normalenform (siehe oben).
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            `;
+        }
+
+        // --- Canvas Logiken ---
+        
+        // HILFSFUNKTION: Extrahiert die wahren CSS-Dimensionen, um Verzerrungen zu vermeiden.
+        function getRealCanvasSize(canvas) {
+            const rect = canvas.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) return null;
+            return { w: rect.width, h: rect.height };
+        }
+
+        function initCanvas() {
+            const canvas = document.getElementById('coordCanvas');
+            const size = getRealCanvasSize(canvas);
+            if (!size) return;
+            const ctx = canvas.getContext('2d');
+            
+            const displayWidth = size.w;
+            const displayHeight = size.h;
+            
+            canvas.width = displayWidth * window.devicePixelRatio;
+            canvas.height = displayHeight * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            
+            const boxSize = 40; 
+            const origin = { x: displayWidth / 2 - 20, y: displayHeight / 2 + 40 }; 
+            
+            let currentStep = 0;
+            const totalSteps = 4;
+            const p = { x1: 3, x2: 4, x3: 5 }; 
+
+            function project(x1, x2, x3) {
+                return {
+                    x: origin.x - x1 * (boxSize / 2) + x2 * boxSize,
+                    y: origin.y + x1 * (boxSize / 2) - x3 * boxSize
+                };
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, displayWidth, displayHeight);
+                draw3DSystem(ctx, displayWidth, displayHeight, origin, boxSize);
+
+                if (currentStep >= 1) { 
+                    const p1 = project(p.x1, 0, 0);
+                    ctx.strokeStyle = '#f87171'; ctx.lineWidth = 3;
+                    ctx.beginPath(); ctx.moveTo(origin.x, origin.y); ctx.lineTo(p1.x, p1.y); ctx.stroke();
+                }
+                if (currentStep >= 2) { 
+                    const p1 = project(p.x1, 0, 0);
+                    const p2 = project(p.x1, p.x2, 0);
+                    ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 3;
+                    ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+                }
+                if (currentStep >= 3) { 
+                    const p2 = project(p.x1, p.x2, 0);
+                    const p3 = project(p.x1, p.x2, p.x3);
+                    ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 3;
+                    ctx.beginPath(); ctx.moveTo(p2.x, p2.y); ctx.lineTo(p3.x, p3.y); ctx.stroke();
+                }
+                if (currentStep >= 4) { 
+                    const p3 = project(p.x1, p.x2, p.x3);
+                    ctx.beginPath();
+                    ctx.arc(p3.x, p3.y, 5, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#fbbf24'; ctx.fill();
+                    ctx.fillStyle = '#fdfbf7'; ctx.font = 'bold 16px sans-serif';
+                    ctx.fillText('P(3|4|5)', p3.x + 10, p3.y - 10);
+                }
+            }
+
+            draw();
+
+            const btnPrev = document.getElementById('btnPrev');
+            const btnNext = document.getElementById('btnNext');
+            const stepIndicator = document.getElementById('stepIndicator');
+
+            if(!btnPrev || !btnNext || !stepIndicator) return;
+
+            btnPrev.onclick = () => {
+                if (currentStep > 0) {
+                    currentStep--;
+                    stepIndicator.innerText = `Schritt ${currentStep}/${totalSteps}`;
+                    btnPrev.disabled = currentStep === 0;
+                    btnNext.disabled = false;
+                    draw();
+                }
+            };
+
+            btnNext.onclick = () => {
+                if (currentStep < totalSteps) {
+                    currentStep++;
+                    stepIndicator.innerText = `Schritt ${currentStep}/${totalSteps}`;
+                    btnPrev.disabled = false;
+                    btnNext.disabled = currentStep === totalSteps;
+                    draw();
+                }
+            };
+        }
+
+        function initCanvas2() {
+            const canvas = document.getElementById('distanceCanvas');
+            const size = getRealCanvasSize(canvas);
+            if (!size) return;
+            const ctx = canvas.getContext('2d');
+            
+            const displayWidth = size.w;
+            const displayHeight = size.h;
+            
+            canvas.width = displayWidth * window.devicePixelRatio;
+            canvas.height = displayHeight * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            ctx.clearRect(0, 0, displayWidth, displayHeight);
+
+            const cx = displayWidth / 2;
+            const cy = displayHeight / 2;
+
+            const boxWidth = 200;  
+            const boxDepth = 90;   
+            const boxHeight = 160; 
+
+            const A = {x: cx - boxWidth/2 - boxDepth/2, y: cy + boxHeight/2 + boxDepth/2};
+            const C = {x: A.x + boxWidth, y: A.y};
+            const Bprime = {x: C.x + boxDepth, y: C.y - boxDepth};
+            const B = {x: Bprime.x, y: Bprime.y - boxHeight};
+
+            const D = {x: A.x + boxDepth, y: A.y - boxDepth};
+            const E = {x: A.x, y: A.y - boxHeight};
+            const F = {x: C.x, y: C.y - boxHeight};
+            const G = {x: D.x, y: D.y - boxHeight};
+
+            ctx.strokeStyle = 'rgba(140, 118, 98, 0.5)'; 
+            ctx.lineWidth = 2;
+            ctx.strokeRect(A.x, E.y, C.x - A.x, A.y - E.y); 
+            ctx.strokeRect(D.x, G.y, Bprime.x - D.x, Bprime.y - G.y); 
+            ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(D.x, D.y); ctx.stroke(); 
+            ctx.beginPath(); ctx.moveTo(C.x, C.y); ctx.lineTo(Bprime.x, Bprime.y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(F.x, F.y); ctx.lineTo(B.x, B.y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(E.x, E.y); ctx.lineTo(G.x, G.y); ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(A.x, A.y); ctx.lineTo(C.x, C.y); ctx.lineTo(Bprime.x, Bprime.y); ctx.closePath();
+            ctx.fillStyle = 'rgba(74, 222, 128, 0.15)'; ctx.fill();
+            ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 3; ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(A.x, A.y); ctx.lineTo(Bprime.x, Bprime.y); ctx.lineTo(B.x, B.y); ctx.closePath();
+            ctx.fillStyle = 'rgba(251, 191, 36, 0.15)'; ctx.fill();
+            ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 3; ctx.stroke();
+
+            ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y);
+            ctx.strokeStyle = '#f43f5e'; ctx.lineWidth = 5; ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(C.x - 18, C.y); ctx.lineTo(C.x - 18 + 12, C.y - 12); ctx.lineTo(C.x + 12, C.y - 12);
+            ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(Bprime.x, Bprime.y - 18); ctx.lineTo(Bprime.x - 15, Bprime.y - 18 + 5); ctx.lineTo(Bprime.x - 15, Bprime.y + 5);
+            ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2; ctx.stroke();
+
+            ctx.beginPath(); ctx.arc(A.x, A.y, 7, 0, Math.PI*2); ctx.fillStyle = '#f87171'; ctx.fill();
+            ctx.beginPath(); ctx.arc(B.x, B.y, 7, 0, Math.PI*2); ctx.fillStyle = '#f87171'; ctx.fill();
+
+            ctx.fillStyle = '#fdfbf7'; ctx.font = 'bold 22px sans-serif';
+            ctx.fillText('A', A.x - 25, A.y + 20);
+            ctx.fillText('B', B.x + 15, B.y - 5);
+            
+            ctx.font = '18px sans-serif'; ctx.fillStyle = '#4ade80'; 
+            ctx.fillText('Δx₂', C.x + 20, C.y - 10);
+            ctx.fillText('Δx₁', A.x + 60, A.y + 30);
+            
+            ctx.fillStyle = '#fbbf24'; 
+            ctx.fillText('Δx₃', B.x + 15, (B.y + Bprime.y) / 2 + 5);
+            
+            ctx.fillStyle = '#f43f5e'; ctx.font = 'bold 24px sans-serif';
+            ctx.fillText('d', (A.x + B.x) / 2 - 20, (A.y + B.y) / 2 - 15);
+        }
+
+        function initPractice2() {
+            const btn = document.getElementById('calcDistBtn');
+            if(!btn) return;
+            btn.onclick = () => {
+                const a1 = parseFloat(document.getElementById('a1').value) || 0;
+                const a2 = parseFloat(document.getElementById('a2').value) || 0;
+                const a3 = parseFloat(document.getElementById('a3').value) || 0;
+                const b1 = parseFloat(document.getElementById('b1').value) || 0;
+                const b2 = parseFloat(document.getElementById('b2').value) || 0;
+                const b3 = parseFloat(document.getElementById('b3').value) || 0;
+                
+                const diff1 = b1 - a1;
+                const diff2 = b2 - a2;
+                const diff3 = b3 - a3;
+                
+                const distSq = diff1*diff1 + diff2*diff2 + diff3*diff3;
+                const dist = Math.sqrt(distSq);
+                
+                const resDiv = document.getElementById('distResult');
+                resDiv.innerHTML = `
+                    <div class="text-sm text-creme-200 mb-2">
+                        d = &radic;<span class="text-mocha-300">((${b1}) - (${a1}))&sup2; + (${b2} - ${a2})&sup2; + (${b3} - ${a3})&sup2;</span>
+                    </div>
+                    <div class="text-sm text-creme-200 mb-2">
+                        d = &radic;<span class="text-mocha-300">(${diff1})&sup2; + (${diff2})&sup2; + (${diff3})&sup2;</span>
+                    </div>
+                    <div class="text-sm text-creme-200 mb-3">
+                        d = &radic;<span class="text-mocha-300">${diff1*diff1} + ${diff2*diff2} + ${diff3*diff3}</span>
+                    </div>
+                    <div class="text-2xl font-bold text-gold-400 border-t border-mocha-600 pt-2">
+                        d = &radic;${distSq} &approx; ${dist.toFixed(2)}
+                    </div>
+                `;
+            };
+        }
+
+        function initCanvas3() {
+            const canvas = document.getElementById('collinearCanvas');
+            const size = getRealCanvasSize(canvas);
+            if (!size) return;
+            const ctx = canvas.getContext('2d');
+            
+            const width = size.w;
+            const height = size.h;
+            canvas.width = width * window.devicePixelRatio;
+            canvas.height = height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            
+            const boxSize = 40;
+            const origin = { x: width / 2, y: height / 2 + 50 };
+            
+            let currentStep = 1;
+            const totalSteps = 3;
+
+            function project(x1, x2, x3) {
+                return {
+                    x: origin.x - x1 * (boxSize / 2) + x2 * boxSize,
+                    y: origin.y + x1 * (boxSize / 2) - x3 * boxSize
+                };
+            }
+
+            const a = { x1: 4, x2: 2, x3: 1 };
+            const b = { x1: -1, x2: 3, x3: 2 };
+            const c = { x1: 0.8*a.x1 + 0.8*b.x1, x2: 0.8*a.x2 + 0.8*b.x2, x3: 0.8*a.x3 + 0.8*b.x3 };
+
+            function drawVec(v, color, prefix, vecName, offsetX, offsetY) {
+                const p = project(v.x1, v.x2, v.x3);
+                ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 4;
+                ctx.moveTo(origin.x, origin.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+                
+                const angle = Math.atan2(p.y - origin.y, p.x - origin.x);
+                ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(angle);
+                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-12, -6); ctx.lineTo(-12, 6); ctx.closePath();
+                ctx.fillStyle = color; ctx.fill(); ctx.restore();
+
+                drawVecLabel(ctx, prefix, vecName, '', p.x + offsetX, p.y + offsetY, color);
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, width, height);
+                ctx.strokeStyle = '#524336'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(0, origin.y); ctx.lineTo(width, origin.y); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(origin.x, height); ctx.lineTo(origin.x, 0); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(origin.x + 6*20, origin.y - 6*20); ctx.lineTo(origin.x - 6*20, origin.y + 6*20); ctx.stroke();
+
+                if (currentStep >= 2) {
+                    const p1 = project(0, 0, 0);
+                    const p2 = project(a.x1, a.x2, a.x3);
+                    const p3 = project(a.x1 + b.x1, a.x2 + b.x2, a.x3 + b.x3);
+                    const p4 = project(b.x1, b.x2, b.x3);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y);
+                    ctx.closePath();
+                    ctx.fillStyle = 'rgba(140, 118, 98, 0.2)'; ctx.fill();
+                    ctx.strokeStyle = '#8c7662'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]);
+                }
+
+                if (currentStep >= 1) {
+                    drawVec(a, '#60a5fa', '', 'a', 15, 20);
+                    drawVec(b, '#60a5fa', '', 'b', -25, -15);
+                }
+
+                if (currentStep >= 3) {
+                    drawVec(c, '#f43f5e', '', 'c', 10, -10); 
+                    
+                    const pA = project(0.8*a.x1, 0.8*a.x2, 0.8*a.x3);
+                    const pB = project(0.8*b.x1, 0.8*b.x2, 0.8*b.x3);
+                    const pC = project(c.x1, c.x2, c.x3);
+                    
+                    ctx.beginPath(); ctx.strokeStyle = '#f43f5e'; ctx.setLineDash([4, 4]); ctx.lineWidth = 2;
+                    ctx.moveTo(pA.x, pA.y); ctx.lineTo(pC.x, pC.y);
+                    ctx.moveTo(pB.x, pB.y); ctx.lineTo(pC.x, pC.y);
+                    ctx.stroke(); ctx.setLineDash([]);
+                }
+            }
+
+            draw();
+
+            const btnPrev = document.getElementById('btnPrev3');
+            const btnNext = document.getElementById('btnNext3');
+            if(!btnPrev || !btnNext) return;
+
+            function updateUI() {
+                btnPrev.disabled = currentStep === 1;
+                btnNext.disabled = currentStep === totalSteps;
+                draw();
+
+                document.querySelectorAll('.step-card3').forEach(el => {
+                    const step = parseInt(el.getAttribute('data-step'));
+                    if (step === currentStep) {
+                        el.classList.remove('opacity-40');
+                        el.classList.add('opacity-100', 'border-l-4', 'shadow-md');
+                        if(step===1) el.classList.add('border-blue-500');
+                        if(step===2) el.classList.add('border-white');
+                        if(step===3) el.classList.add('border-rose-500');
+                    } else if (step < currentStep) {
+                        el.classList.remove('opacity-40', 'shadow-md');
+                        el.classList.add('opacity-100');
+                        el.className = el.className.replace(/border-(blue|white|rose)-\d+/, 'border-mocha-600');
+                    } else {
+                        el.classList.add('opacity-40');
+                        el.classList.remove('opacity-100', 'shadow-md');
+                        el.className = el.className.replace(/border-(blue|white|rose)-\d+/, 'border-mocha-600');
+                    }
+                });
+            }
+
+            btnPrev.onclick = () => { if (currentStep > 1) { currentStep--; updateUI(); } };
+            btnNext.onclick = () => { if (currentStep < totalSteps) { currentStep++; updateUI(); } };
+            updateUI();
+        }
+
+        function initCanvas4() {
+            const canvas = document.getElementById('lineCanvas');
+            const size = getRealCanvasSize(canvas);
+            if (!size) return;
+            const ctx = canvas.getContext('2d');
+            
+            const displayWidth = size.w;
+            const displayHeight = size.h;
+            canvas.width = displayWidth * window.devicePixelRatio;
+            canvas.height = displayHeight * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            
+            const boxSize = 40;
+            const origin = { x: displayWidth / 2 - 30, y: displayHeight / 2 + 50 };
+            
+            let currentStep = 0;
+            const totalSteps = 5;
+
+            function project(x1, x2, x3) {
+                return {
+                    x: origin.x - x1 * (boxSize / 2) + x2 * boxSize,
+                    y: origin.y + x1 * (boxSize / 2) - x3 * boxSize
+                };
+            }
+
+            const p = { x1: -4, x2: -1, x3: 2 }; 
+            const u = { x1: 3, x2: 2, x3: -1 }; 
+
+            function drawArrowLine(x1, y1, x2, y2, color, prefix, vecName, offsetX, offsetY) {
+                ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 3;
+                ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+                
+                const angle = Math.atan2(y2 - y1, x2 - x1);
+                ctx.save(); ctx.translate(x2, y2); ctx.rotate(angle);
+                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-10, -5); ctx.lineTo(-10, 5); ctx.closePath();
+                ctx.fillStyle = color; ctx.fill(); ctx.restore();
+
+                drawVecLabel(ctx, prefix, vecName, '', x2 + offsetX, y2 + offsetY, color);
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, displayWidth, displayHeight);
+                draw3DSystem(ctx, displayWidth, displayHeight, origin, boxSize);
+
+                const p_proj = project(p.x1, p.x2, p.x3);
+
+                if (currentStep >= 5) {
+                    const g1 = project(p.x1 - 10*u.x1, p.x2 - 10*u.x2, p.x3 - 10*u.x3);
+                    const g2 = project(p.x1 + 10*u.x1, p.x2 + 10*u.x2, p.x3 + 10*u.x3);
+                    ctx.beginPath(); ctx.strokeStyle = '#8c7662'; ctx.lineWidth = 3; 
+                    ctx.moveTo(g1.x, g1.y); ctx.lineTo(g2.x, g2.y); ctx.stroke();
+                    
+                    const gLabel = project(p.x1 + 3.5*u.x1, p.x2 + 3.5*u.x2, p.x3 + 3.5*u.x3);
+                    ctx.fillStyle = '#fdfbf7'; ctx.font = 'bold 22px sans-serif'; 
+                    ctx.fillText('g', gLabel.x + 15, gLabel.y - 15);
+                }
+
+                if (currentStep >= 1) drawArrowLine(origin.x, origin.y, p_proj.x, p_proj.y, '#fbbf24', '', 'p', -25, 20); 
+
+                if (currentStep >= 2) {
+                    const u1_end = project(p.x1 + u.x1, p.x2 + u.x2, p.x3 + u.x3);
+                    drawArrowLine(p_proj.x, p_proj.y, u1_end.x, u1_end.y, '#4ade80', '1·', 'u', 10, -10);
+                    drawArrowLine(origin.x, origin.y, u1_end.x, u1_end.y, '#f43f5e', '', 'x', 15, 20); 
+                }
+
+                if (currentStep >= 3) {
+                    const u1_end = project(p.x1 + u.x1, p.x2 + u.x2, p.x3 + u.x3);
+                    const u2_end = project(p.x1 + 2*u.x1, p.x2 + 2*u.x2, p.x3 + 2*u.x3);
+                    drawArrowLine(u1_end.x, u1_end.y, u2_end.x, u2_end.y, '#4ade80', '1·', 'u', 10, -10);
+                    drawArrowLine(origin.x, origin.y, u2_end.x, u2_end.y, '#f43f5e', '', 'x', 15, 25);
+                }
+
+                if (currentStep >= 4) {
+                    const u_minus2_end = project(p.x1 - 2*u.x1, p.x2 - 2*u.x2, p.x3 - 2*u.x3);
+                    ctx.beginPath(); ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 3; ctx.setLineDash([4,4]);
+                    ctx.moveTo(p_proj.x, p_proj.y); ctx.lineTo(u_minus2_end.x, u_minus2_end.y); ctx.stroke(); ctx.setLineDash([]);
+                    
+                    const angle = Math.atan2(u_minus2_end.y - p_proj.y, u_minus2_end.x - p_proj.x);
+                    ctx.save(); ctx.translate(u_minus2_end.x, u_minus2_end.y); ctx.rotate(angle);
+                    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-10, -5); ctx.lineTo(-10, 5); ctx.closePath();
+                    ctx.fillStyle = '#4ade80'; ctx.fill(); ctx.restore();
+                    
+                    drawVecLabel(ctx, '-2·', 'u', '', u_minus2_end.x - 35, u_minus2_end.y - 15, '#4ade80');
+                    drawArrowLine(origin.x, origin.y, u_minus2_end.x, u_minus2_end.y, '#f43f5e', '', 'x', -25, 20);
+                }
+            }
+
+            draw();
+
+            const btnPrev = document.getElementById('btnPrev4');
+            const btnNext = document.getElementById('btnNext4');
+            const stepIndicator = document.getElementById('stepIndicator4');
+            if(!btnPrev || !btnNext || !stepIndicator) return;
+
+            function updateUI() {
+                btnPrev.disabled = currentStep === 0;
+                btnNext.disabled = currentStep === totalSteps;
+                stepIndicator.innerText = `Schritt ${currentStep}/${totalSteps}`;
+                draw();
+            }
+
+            btnPrev.onclick = () => { if (currentStep > 0) { currentStep--; updateUI(); } };
+            btnNext.onclick = () => { if (currentStep < totalSteps) { currentStep++; updateUI(); } };
+            updateUI();
+        }
+
+        function initCanvas4b() {
+            const canvas = document.getElementById('lineTwoPointsCanvas');
+            const size = getRealCanvasSize(canvas);
+            if (!size) return;
+            const ctx = canvas.getContext('2d');
+            
+            const displayWidth = size.w;
+            const displayHeight = size.h;
+            canvas.width = displayWidth * window.devicePixelRatio;
+            canvas.height = displayHeight * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            
+            const boxSize = 40; 
+            const origin = { x: displayWidth / 2 - 20, y: displayHeight / 2 + 50 };
+            
+            let currentStep = 0;
+            const totalSteps = 4;
+
+            function project(x1, x2, x3) {
+                return {
+                    x: origin.x - x1 * (boxSize / 2) + x2 * boxSize,
+                    y: origin.y + x1 * (boxSize / 2) - x3 * boxSize
+                };
+            }
+
+            const P = { x1: 2, x2: -1, x3: 3 };
+            const Q = { x1: 0, x2: 3, x3: 3 };
+            const u = { x1: -2, x2: 4, x3: 0 };
+
+            function drawArrowLine(x1, y1, x2, y2, color, isU) {
+                ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 3;
+                ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+                
+                const angle = Math.atan2(y2 - y1, x2 - x1);
+                ctx.save(); ctx.translate(x2, y2); ctx.rotate(angle);
+                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-10, -5); ctx.lineTo(-10, 5); ctx.closePath();
+                ctx.fillStyle = color; ctx.fill(); ctx.restore();
+
+                if(isU === 'p') drawVecLabel(ctx, '', 'p', '', x2 - 25, y2 + 20, color);
+                if(isU === 'u') {
+                    drawVecLabel(ctx, '', 'u', ' = ', x2 - 60, y2 - 15, color);
+                    let w1 = ctx.measureText('u = ').width;
+                    drawVecLabel(ctx, '', 'PQ', '', x2 - 60 + w1, y2 - 15, color);
+                }
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, displayWidth, displayHeight);
+                draw3DSystem(ctx, displayWidth, displayHeight, origin, boxSize);
+
+                const p_proj = project(P.x1, P.x2, P.x3);
+                const q_proj = project(Q.x1, Q.x2, Q.x3);
+
+                if (currentStep >= 4) {
+                    const g1 = project(P.x1 - 1*u.x1, P.x2 - 1*u.x2, P.x3 - 1*u.x3);
+                    const g2 = project(P.x1 + 2*u.x1, P.x2 + 2*u.x2, P.x3 + 2*u.x3);
+                    ctx.beginPath(); ctx.strokeStyle = '#8c7662'; ctx.lineWidth = 2; 
+                    ctx.moveTo(g1.x, g1.y); ctx.lineTo(g2.x, g2.y); ctx.stroke();
+                    
+                    const gLabel = project(P.x1 + 1.2*u.x1, P.x2 + 1.2*u.x2, P.x3 + 1.2*u.x3);
+                    ctx.fillStyle = '#fdfbf7'; ctx.font = 'bold 22px sans-serif'; 
+                    ctx.fillText('g', gLabel.x + 10, gLabel.y - 15);
+                }
+
+                if (currentStep >= 1) {
+                    drawArrowLine(origin.x, origin.y, p_proj.x, p_proj.y, '#fbbf24', 'p'); 
+                    ctx.beginPath(); ctx.arc(p_proj.x, p_proj.y, 5, 0, 2*Math.PI); ctx.fillStyle = '#fdfbf7'; ctx.fill();
+                    ctx.fillStyle = '#fdfbf7'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('P', p_proj.x - 20, p_proj.y - 10);
+                }
+
+                if (currentStep >= 2) {
+                    ctx.beginPath(); ctx.arc(q_proj.x, q_proj.y, 5, 0, 2*Math.PI); ctx.fillStyle = '#fdfbf7'; ctx.fill();
+                    ctx.fillStyle = '#fdfbf7'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('Q', q_proj.x + 10, q_proj.y - 5);
+                }
+
+                if (currentStep >= 3) {
+                    drawArrowLine(p_proj.x, p_proj.y, q_proj.x, q_proj.y, '#4ade80', 'u'); 
+                }
+            }
+
+            draw();
+
+            const btnPrev = document.getElementById('btnPrev4b');
+            const btnNext = document.getElementById('btnNext4b');
+            if(!btnPrev || !btnNext) return;
+
+            function updateUI() {
+                btnPrev.disabled = currentStep === 0;
+                btnNext.disabled = currentStep === totalSteps;
+                draw();
+            }
+
+            btnPrev.onclick = () => { if (currentStep > 0) { currentStep--; updateUI(); } };
+            btnNext.onclick = () => { if (currentStep < totalSteps) { currentStep++; updateUI(); } };
+            updateUI();
+        }
+
+        function initCanvas5() {
+            const canvas = document.getElementById('planeCanvas');
+            const size = getRealCanvasSize(canvas);
+            if (!size) return;
+            const ctx = canvas.getContext('2d');
+            
+            const displayWidth = size.w;
+            const displayHeight = size.h;
+            canvas.width = displayWidth * window.devicePixelRatio;
+            canvas.height = displayHeight * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            
+            const boxSize = 40;
+            const origin = { x: displayWidth / 2 - 30, y: displayHeight / 2 + 50 };
+            
+            let currentStep = 0;
+            const totalSteps = 5;
+
+            function project(x1, x2, x3) {
+                return {
+                    x: origin.x - x1 * (boxSize / 2) + x2 * boxSize,
+                    y: origin.y + x1 * (boxSize / 2) - x3 * boxSize
+                };
+            }
+
+            const p = { x1: -2, x2: -1, x3: 2 }; 
+            const u = { x1: 3, x2: 1, x3: -1 }; 
+            const v = { x1: -1, x2: 2, x3: 1 }; 
+
+            function drawArrowLine(x1, y1, x2, y2, color, prefix, vecName, offsetX, offsetY) {
+                ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 3;
+                ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+                
+                const angle = Math.atan2(y2 - y1, x2 - x1);
+                ctx.save(); ctx.translate(x2, y2); ctx.rotate(angle);
+                ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-10, -5); ctx.lineTo(-10, 5); ctx.closePath();
+                ctx.fillStyle = color; ctx.fill(); ctx.restore();
+
+                drawVecLabel(ctx, prefix, vecName, '', x2 + offsetX, y2 + offsetY, color);
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, displayWidth, displayHeight);
+                draw3DSystem(ctx, displayWidth, displayHeight, origin, boxSize);
+
+                const p_proj = project(p.x1, p.x2, p.x3);
+
+                if (currentStep >= 5) {
+                    const e1 = project(p.x1 - u.x1 - v.x1, p.x2 - u.x2 - v.x2, p.x3 - u.x3 - v.x3);
+                    const e2 = project(p.x1 + 2*u.x1 - v.x1, p.x2 + 2*u.x2 - v.x2, p.x3 + 2*u.x3 - v.x3);
+                    const e3 = project(p.x1 + 2*u.x1 + 1.5*v.x1, p.x2 + 2*u.x2 + 1.5*v.x2, p.x3 + 2*u.x3 + 1.5*v.x3);
+                    const e4 = project(p.x1 - u.x1 + 1.5*v.x1, p.x2 - u.x2 + 1.5*v.x2, p.x3 - u.x3 + 1.5*v.x3);
+
+                    ctx.beginPath();
+                    ctx.moveTo(e1.x, e1.y); ctx.lineTo(e2.x, e2.y); ctx.lineTo(e3.x, e3.y); ctx.lineTo(e4.x, e4.y);
+                    ctx.closePath();
+                    ctx.fillStyle = 'rgba(251, 191, 36, 0.15)'; ctx.fill();
+                    ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2; ctx.stroke();
+                    
+                    const eLabel = project(p.x1 + 1.9*u.x1 + 1.4*v.x1, p.x2 + 1.9*u.x2 + 1.4*v.x2, p.x3 + 1.9*u.x3 + 1.4*v.x3);
+                    ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 22px sans-serif'; 
+                    ctx.fillText('E', eLabel.x + 5, eLabel.y - 5);
+                }
+
+                if (currentStep >= 1) drawArrowLine(origin.x, origin.y, p_proj.x, p_proj.y, '#f59e0b', '', 'p', -20, 25); 
+
+                if (currentStep >= 2) {
+                    const u_end = project(p.x1 + u.x1, p.x2 + u.x2, p.x3 + u.x3);
+                    drawArrowLine(p_proj.x, p_proj.y, u_end.x, u_end.y, '#4ade80', '', 'u', 10, -10);
+                }
+
+                if (currentStep >= 3) {
+                    const u_end = project(p.x1 + u.x1, p.x2 + u.x2, p.x3 + u.x3);
+                    const v_end = project(p.x1 + v.x1, p.x2 + v.x2, p.x3 + v.x3);
+                    drawArrowLine(p_proj.x, p_proj.y, u_end.x, u_end.y, '#4ade80', '', 'u', 10, -10);
+                    drawArrowLine(p_proj.x, p_proj.y, v_end.x, v_end.y, '#60a5fa', '', 'v', -25, -5); 
+                }
+
+                if (currentStep >= 4) {
+                    const u_end = project(p.x1 + u.x1, p.x2 + u.x2, p.x3 + u.x3);
+                    const v_end = project(p.x1 + v.x1, p.x2 + v.x2, p.x3 + v.x3);
+                    const uv_end = project(p.x1 + u.x1 + v.x1, p.x2 + u.x2 + v.x2, p.x3 + u.x3 + v.x3);
+
+                    ctx.beginPath(); ctx.strokeStyle = '#a8a29e'; ctx.setLineDash([4,4]);
+                    ctx.moveTo(u_end.x, u_end.y); ctx.lineTo(uv_end.x, uv_end.y);
+                    ctx.moveTo(v_end.x, v_end.y); ctx.lineTo(uv_end.x, uv_end.y);
+                    ctx.stroke(); ctx.setLineDash([]);
+                    
+                    drawArrowLine(origin.x, origin.y, uv_end.x, uv_end.y, '#f43f5e', '', 'x', 15, 20); 
+                }
+            }
+
+            draw();
+
+            const btnPrev = document.getElementById('btnPrev5');
+            const btnNext = document.getElementById('btnNext5');
+            if(!btnPrev || !btnNext) return;
+
+            function updateUI() {
+                btnPrev.disabled = currentStep === 0;
+                btnNext.disabled = currentStep === totalSteps;
+                draw();
+            }
+
+            btnPrev.onclick = () => { if (currentStep > 0) { currentStep--; updateUI(); } };
+            btnNext.onclick = () => { if (currentStep < totalSteps) { currentStep++; updateUI(); } };
+            updateUI();
+        }
+
+        function initCanvas6() {
+            const canvas = document.getElementById('angleLinesCanvas');
+            const size = getRealCanvasSize(canvas);
+            if (!size) return;
+            const ctx = canvas.getContext('2d');
+            
+            const displayWidth = size.w;
+            const displayHeight = size.h;
+            canvas.width = displayWidth * window.devicePixelRatio;
+            canvas.height = displayHeight * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            
+            const origin = { x: displayWidth / 2, y: displayHeight / 2 + 50 };
+            ctx.clearRect(0, 0, displayWidth, displayHeight);
+
+            // Raster quadratisch zeichnen, beginnend vom Ursprung
+            ctx.strokeStyle = '#524336'; ctx.lineWidth = 1;
+            const gridX = (origin.x % 30 + 30) % 30;
+            for(let x=gridX; x<displayWidth; x+=30) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,displayHeight); ctx.stroke(); }
+            const gridY = (origin.y % 30 + 30) % 30;
+            for(let y=gridY; y<displayHeight; y+=30) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(displayWidth,y); ctx.stroke(); }
+
+            ctx.strokeStyle = '#6e5a4a'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(0, origin.y); ctx.lineTo(displayWidth, origin.y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(origin.x, 0); ctx.lineTo(origin.x, displayHeight); ctx.stroke();
+
+            ctx.beginPath(); ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 3;
+            ctx.moveTo(10, origin.y); ctx.lineTo(displayWidth - 10, origin.y); ctx.stroke();
+            ctx.fillStyle = '#fde68a'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('g', displayWidth - 25, origin.y - 10);
+            
+            ctx.beginPath(); ctx.strokeStyle = '#fde68a'; ctx.lineWidth = 4;
+            ctx.moveTo(origin.x, origin.y); ctx.lineTo(origin.x + 100, origin.y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(origin.x+100, origin.y); ctx.lineTo(origin.x+90, origin.y-5); ctx.lineTo(origin.x+90, origin.y+5); ctx.fillStyle='#fde68a'; ctx.fill();
+            drawVecLabel(ctx, '', 'u', '', origin.x + 80, origin.y - 15, '#fde68a');
+
+            ctx.beginPath(); ctx.strokeStyle = '#34d399'; ctx.lineWidth = 3; 
+            ctx.moveTo(origin.x - 120, origin.y + 120); ctx.lineTo(origin.x + 120, origin.y - 120); ctx.stroke();
+            ctx.fillStyle = '#6ee7b7'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('h', origin.x + 120, origin.y - 125);
+
+            ctx.beginPath(); ctx.strokeStyle = '#6ee7b7'; ctx.lineWidth = 4;
+            ctx.moveTo(origin.x, origin.y); ctx.lineTo(origin.x + 100, origin.y - 100); ctx.stroke();
+            ctx.save(); ctx.translate(origin.x+100, origin.y-100); ctx.rotate(-Math.PI/4);
+            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-10,-5); ctx.lineTo(-10,5); ctx.fillStyle='#6ee7b7'; ctx.fill(); ctx.restore();
+            drawVecLabel(ctx, '', 'v', '', origin.x + 75, origin.y - 95, '#6ee7b7');
+
+            ctx.beginPath(); ctx.strokeStyle = '#f43f5e'; ctx.lineWidth = 2;
+            ctx.arc(origin.x, origin.y, 40, -Math.PI/4, 0); ctx.stroke();
+            ctx.fillStyle = '#fb7185'; ctx.font = 'italic bold 18px sans-serif'; ctx.fillText('α', origin.x + 45, origin.y - 15);
+        }
+
+        function initCanvas7() {
+            const canvas = document.getElementById('anglePlaneCanvas');
+            const size = getRealCanvasSize(canvas);
+            if (!size) return;
+            const ctx = canvas.getContext('2d');
+            
+            const displayWidth = size.w;
+            const displayHeight = size.h;
+            canvas.width = displayWidth * window.devicePixelRatio;
+            canvas.height = displayHeight * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            
+            const origin = { x: displayWidth / 2, y: displayHeight / 2 + 30 };
+            ctx.clearRect(0, 0, displayWidth, displayHeight);
+
+            ctx.beginPath();
+            ctx.moveTo(origin.x - 120, origin.y + 40); ctx.lineTo(origin.x + 80, origin.y + 40);
+            ctx.lineTo(origin.x + 120, origin.y - 40); ctx.lineTo(origin.x - 80, origin.y - 40);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(251, 191, 36, 0.15)'; ctx.fill();
+            ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = '#fde68a'; ctx.font = 'bold 20px sans-serif'; ctx.fillText('E', origin.x - 100, origin.y + 30);
+
+            ctx.beginPath(); ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 4;
+            ctx.moveTo(origin.x, origin.y); ctx.lineTo(origin.x, origin.y - 120); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(origin.x, origin.y-120); ctx.lineTo(origin.x-5, origin.y-110); ctx.lineTo(origin.x+5, origin.y-110); ctx.fillStyle='#4ade80'; ctx.fill();
+            drawVecLabel(ctx, '', 'n', '', origin.x + 10, origin.y - 100, '#86efac');
+
+            ctx.beginPath(); ctx.strokeStyle = '#34d399'; ctx.lineWidth = 3;
+            ctx.moveTo(origin.x - 60, origin.y + 60); ctx.lineTo(origin.x, origin.y); ctx.stroke();
+            
+            ctx.beginPath(); ctx.strokeStyle = '#34d399'; ctx.setLineDash([5, 5]); 
+            ctx.moveTo(origin.x, origin.y); ctx.lineTo(origin.x + 20, origin.y - 20); ctx.stroke(); ctx.setLineDash([]);
+            
+            ctx.beginPath(); ctx.strokeStyle = '#34d399'; ctx.lineWidth = 3; 
+            ctx.moveTo(origin.x + 20, origin.y - 20); ctx.lineTo(origin.x + 100, origin.y - 100); ctx.stroke();
+            ctx.fillStyle = '#6ee7b7'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('g', origin.x + 105, origin.y - 95);
+
+            ctx.beginPath(); ctx.strokeStyle = '#6ee7b7'; ctx.lineWidth = 4;
+            ctx.moveTo(origin.x, origin.y); ctx.lineTo(origin.x + 80, origin.y - 80); ctx.stroke();
+            ctx.save(); ctx.translate(origin.x+80, origin.y-80); ctx.rotate(-Math.PI/4);
+            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-10,-5); ctx.lineTo(-10,5); ctx.fillStyle='#6ee7b7'; ctx.fill(); ctx.restore();
+            drawVecLabel(ctx, '', 'u', '', origin.x + 60, origin.y - 85, '#6ee7b7');
+
+            ctx.beginPath(); ctx.strokeStyle = '#a8a29e'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+            ctx.moveTo(origin.x, origin.y); ctx.lineTo(origin.x + 80, origin.y); ctx.stroke(); ctx.setLineDash([]);
+
+            ctx.beginPath(); ctx.strokeStyle = '#f43f5e'; ctx.lineWidth = 2;
+            ctx.arc(origin.x, origin.y, 40, -Math.PI/4, 0); ctx.stroke();
+            ctx.fillStyle = '#fb7185'; ctx.font = 'italic bold 18px sans-serif'; ctx.fillText('α', origin.x + 45, origin.y - 15);
+        }
+
+        function initCanvas8() {
+            const canvas = document.getElementById('dotProductCanvas');
+            const size = getRealCanvasSize(canvas);
+            if (!size) return;
+            const ctx = canvas.getContext('2d');
+            
+            const displayWidth = size.w;
+            const displayHeight = size.h;
+            canvas.width = displayWidth * window.devicePixelRatio;
+            canvas.height = displayHeight * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            
+            ctx.clearRect(0, 0, displayWidth, displayHeight);
+
+            const origin = { x: 50, y: displayHeight - 70 };
+            
+            const angleDeg = -60;
+            const angleRad = angleDeg * Math.PI / 180;
+            const lenA = displayWidth - 100; // Dynamische Pfeillänge
+            const lenB = 180;
+            
+            const vecA = { x: lenA, y: 0 };
+            const vecB = { x: lenB * Math.cos(angleRad), y: lenB * Math.sin(angleRad) };
+            const projX = origin.x + vecB.x;
+
+            ctx.beginPath(); ctx.arc(origin.x, origin.y, 45, angleRad, 0);
+            ctx.strokeStyle = '#f43f5e'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = '#fb7185'; ctx.font = 'italic bold 18px sans-serif'; ctx.fillText('α', origin.x + 55, origin.y - 20);
+
+            ctx.beginPath(); ctx.moveTo(origin.x, origin.y); ctx.lineTo(projX, origin.y);
+            ctx.strokeStyle = 'rgba(251, 191, 36, 0.4)'; ctx.lineWidth = 12; ctx.lineCap = 'round'; ctx.stroke();
+            drawVecLabel(ctx, '|', 'b', '| · cos(α)', origin.x + vecB.x / 2 - 35, origin.y + 25, '#fbbf24');
+
+            ctx.beginPath(); ctx.moveTo(projX, origin.y + vecB.y); ctx.lineTo(projX, origin.y);
+            ctx.strokeStyle = '#a8a29e'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.stroke(); ctx.setLineDash([]);
+
+            ctx.beginPath(); ctx.moveTo(projX - 12, origin.y); ctx.lineTo(projX - 12, origin.y - 12); ctx.lineTo(projX, origin.y - 12);
+            ctx.strokeStyle = '#a8a29e'; ctx.lineWidth = 1.5; ctx.stroke();
+            ctx.beginPath(); ctx.arc(projX - 6, origin.y - 6, 1.5, 0, Math.PI*2); ctx.fillStyle='#a8a29e'; ctx.fill();
+
+            ctx.beginPath(); ctx.moveTo(origin.x, origin.y); ctx.lineTo(origin.x + vecA.x, origin.y);
+            ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 4; ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(origin.x+vecA.x, origin.y); ctx.lineTo(origin.x+vecA.x-12, origin.y-6); ctx.lineTo(origin.x+vecA.x-12, origin.y+6); ctx.fillStyle='#fbbf24'; ctx.fill();
+            drawVecLabel(ctx, '', 'a', '', origin.x + vecA.x - 15, origin.y - 15, '#fde68a');
+
+            ctx.beginPath(); ctx.moveTo(origin.x, origin.y); ctx.lineTo(origin.x + vecB.x, origin.y + vecB.y);
+            ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 4; ctx.stroke();
+            ctx.save(); ctx.translate(origin.x+vecB.x, origin.y+vecB.y); ctx.rotate(angleRad);
+            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-12,-6); ctx.lineTo(-12,6); ctx.fillStyle='#4ade80'; ctx.fill(); ctx.restore();
+            drawVecLabel(ctx, '', 'b', '', origin.x + vecB.x / 2 - 25, origin.y + vecB.y / 2 - 15, '#86efac');
+            
+            ctx.beginPath(); ctx.arc(origin.x, origin.y, 4, 0, Math.PI*2); ctx.fillStyle='#fdfbf7'; ctx.fill();
+        }
+
+        function initCanvas9() {
+            const canvas = document.getElementById('tracePointsCanvas');
+            const size = getRealCanvasSize(canvas);
+            if (!size) return;
+            const ctx = canvas.getContext('2d');
+            
+            const displayWidth = size.w;
+            const displayHeight = size.h;
+            canvas.width = displayWidth * window.devicePixelRatio;
+            canvas.height = displayHeight * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+            const boxSize = 40; 
+            const origin = { x: displayWidth / 2 - 20, y: displayHeight / 2 + 120 }; 
+
+            let currentStep = 0;
+            const totalSteps = 4;
+
+            function project(x1, x2, x3) {
+                return {
+                    x: origin.x - x1 * (boxSize / 2) + x2 * boxSize,
+                    y: origin.y + x1 * (boxSize / 2) - x3 * boxSize
+                };
+            }
+
+            const s1 = project(3, 0, 0);
+            const s2 = project(0, 2, 0);
+            const s3 = project(0, 0, 6);
+
+            function draw() {
+                ctx.clearRect(0, 0, displayWidth, displayHeight);
+                draw3DSystem(ctx, displayWidth, displayHeight, origin, boxSize);
+
+                if (currentStep >= 4) {
+                    ctx.beginPath(); ctx.moveTo(s1.x, s1.y); ctx.lineTo(s2.x, s2.y); ctx.lineTo(s3.x, s3.y); ctx.closePath();
+                    ctx.fillStyle = 'rgba(251, 191, 36, 0.15)'; ctx.fill();
+                    
+                    ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 3;
+                    ctx.beginPath(); ctx.moveTo(s1.x, s1.y); ctx.lineTo(s2.x, s2.y); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(s2.x, s2.y); ctx.lineTo(s3.x, s3.y); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(s1.x, s1.y); ctx.lineTo(s3.x, s3.y); ctx.stroke();
+                }
+
+                if (currentStep >= 1) {
+                    ctx.beginPath(); ctx.arc(s1.x, s1.y, 6, 0, 2*Math.PI); ctx.fillStyle = '#60a5fa'; ctx.fill();
+                    ctx.strokeStyle = '#fdfbf7'; ctx.lineWidth = 2; ctx.stroke();
+                    ctx.fillStyle = '#fdfbf7'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('S₁', s1.x - 30, s1.y + 5);
+                }
+
+                if (currentStep >= 2) {
+                    ctx.beginPath(); ctx.arc(s2.x, s2.y, 6, 0, 2*Math.PI); ctx.fillStyle = '#4ade80'; ctx.fill();
+                    ctx.strokeStyle = '#fdfbf7'; ctx.lineWidth = 2; ctx.stroke();
+                    ctx.fillStyle = '#fdfbf7'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('S₂', s2.x + 10, s2.y - 10);
+                }
+
+                if (currentStep >= 3) {
+                    ctx.beginPath(); ctx.arc(s3.x, s3.y, 6, 0, 2*Math.PI); ctx.fillStyle = '#f87171'; ctx.fill();
+                    ctx.strokeStyle = '#fdfbf7'; ctx.lineWidth = 2; ctx.stroke();
+                    ctx.fillStyle = '#fdfbf7'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('S₃', s3.x + 15, s3.y + 5);
+                }
+            }
+
+            draw();
+
+            const btnPrev = document.getElementById('btnPrev9');
+            const btnNext = document.getElementById('btnNext9');
+            const stepIndicator = document.getElementById('stepIndicator9');
+            if(!btnPrev || !btnNext || !stepIndicator) return;
+
+            function updateUI() {
+                btnPrev.disabled = currentStep === 0;
+                btnNext.disabled = currentStep === totalSteps;
+                stepIndicator.innerText = `Schritt ${currentStep}/${totalSteps}`;
+                draw();
+
+                document.querySelectorAll('.step-card9').forEach(el => {
+                    const step = parseInt(el.getAttribute('data-step'));
+                    if (step === currentStep) {
+                        el.classList.remove('opacity-40');
+                        el.classList.add('opacity-100', 'border-l-4', 'shadow-md');
+                        if(step===1) el.classList.add('border-blue-500');
+                        if(step===2) el.classList.add('border-green-500');
+                        if(step===3) el.classList.add('border-red-500');
+                        if(step===4) el.classList.add('border-white');
+                    } else if (step < currentStep) {
+                        el.classList.remove('opacity-40', 'shadow-md');
+                        el.classList.add('opacity-100');
+                        el.className = el.className.replace(/border-(blue|green|red|white)-\d+/, 'border-mocha-600');
+                    } else {
+                        el.classList.add('opacity-40');
+                        el.classList.remove('opacity-100', 'shadow-md');
+                        el.className = el.className.replace(/border-(blue|green|red|white)-\d+/, 'border-mocha-600');
+                    }
+                });
+            }
+
+            btnPrev.onclick = () => { if (currentStep > 0) { currentStep--; updateUI(); } };
+            btnNext.onclick = () => { if (currentStep < totalSteps) { currentStep++; updateUI(); } };
+            updateUI(); 
+        }
+
+        function initCanvas10() {
+            const canvas = document.getElementById('distPlaneCanvas');
+            const size = getRealCanvasSize(canvas);
+            if (!size) return;
+            const ctx = canvas.getContext('2d');
+            const displayWidth = size.w;
+            const displayHeight = size.h;
+            canvas.width = displayWidth * window.devicePixelRatio;
+            canvas.height = displayHeight * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            
+            const cx = displayWidth / 2;
+            const cy = displayHeight / 2 + 40;
+            ctx.clearRect(0, 0, displayWidth, displayHeight);
+
+            // Ebene E (schematisches Parallelogramm)
+            ctx.beginPath();
+            ctx.moveTo(cx - 140, cy + 50); 
+            ctx.lineTo(cx + 80, cy + 50);
+            ctx.lineTo(cx + 140, cy - 30); 
+            ctx.lineTo(cx - 80, cy - 30);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(251, 191, 36, 0.15)'; 
+            ctx.fill();
+            ctx.strokeStyle = '#fbbf24'; 
+            ctx.lineWidth = 2; 
+            ctx.stroke();
+            ctx.fillStyle = '#fde68a'; 
+            ctx.font = 'bold 22px sans-serif'; 
+            ctx.fillText('E', cx - 110, cy + 30);
+
+            // Punkte P und F
+            const pX = cx + 20; 
+            const pY = cy - 140; // P liegt im Raum darüber
+            const fX = cx + 20; 
+            const fY = cy;       // F exakt senkrecht darunter auf der Ebene
+
+            // Lotgerade (unter der Ebene gestrichelt andeuten)
+            ctx.beginPath(); 
+            ctx.strokeStyle = '#a8a29e'; 
+            ctx.lineWidth = 2; 
+            ctx.setLineDash([5, 5]);
+            ctx.moveTo(fX, fY); 
+            ctx.lineTo(fX, fY + 60); 
+            ctx.stroke(); 
+            ctx.setLineDash([]);
+            
+            // Abstandsvektor PF (rote Linie)
+            ctx.beginPath(); 
+            ctx.strokeStyle = '#f43f5e'; 
+            ctx.lineWidth = 3; 
+            ctx.moveTo(pX, pY); 
+            ctx.lineTo(fX, fY); 
+            ctx.stroke();
+            
+            // Verlängerung der Hilfsgeraden h nach oben
+            ctx.beginPath(); 
+            ctx.strokeStyle = '#a8a29e'; 
+            ctx.lineWidth = 2;
+            ctx.moveTo(pX, pY);
+            ctx.lineTo(pX, pY - 30);
+            ctx.stroke();
+            
+            // Label der Geraden h
+            ctx.fillStyle = '#a8a29e'; 
+            ctx.font = 'italic 18px sans-serif'; 
+            ctx.fillText('h', pX + 10, pY - 20);
+
+            // Normalenvektor der Ebene (zur klaren Veranschaulichung links platziert)
+            const nX = cx - 40;
+            const nY = cy;
+            ctx.beginPath(); 
+            ctx.strokeStyle = '#4ade80'; 
+            ctx.lineWidth = 3;
+            ctx.moveTo(nX, nY); 
+            ctx.lineTo(nX, nY - 70); 
+            ctx.stroke();
+            
+            // Pfeilspitze des Normalenvektors
+            ctx.beginPath(); 
+            ctx.moveTo(nX, nY - 70); 
+            ctx.lineTo(nX - 6, nY - 60); 
+            ctx.lineTo(nX + 6, nY - 60); 
+            ctx.fillStyle = '#4ade80'; 
+            ctx.fill();
+            drawVecLabel(ctx, '', 'n', '', nX - 25, nY - 35, '#86efac');
+            
+            // Rechter Winkel für den Normalenvektor
+            ctx.beginPath(); 
+            ctx.strokeStyle = '#fdfbf7'; 
+            ctx.lineWidth = 1.5;
+            ctx.moveTo(nX, nY - 15); 
+            ctx.lineTo(nX + 15, nY - 15); 
+            ctx.lineTo(nX + 15, nY); 
+            ctx.stroke();
+            ctx.beginPath(); 
+            ctx.arc(nX + 7, nY - 7, 2, 0, Math.PI*2); 
+            ctx.fillStyle = '#fdfbf7'; 
+            ctx.fill();
+
+            // Rechter Winkel für die Lotgerade im Durchstoßpunkt F
+            ctx.beginPath(); 
+            ctx.strokeStyle = '#fdfbf7'; 
+            ctx.lineWidth = 1.5;
+            ctx.moveTo(fX, fY - 15); 
+            ctx.lineTo(fX + 15, fY - 15); 
+            ctx.lineTo(fX + 15, fY); 
+            ctx.stroke();
+            ctx.beginPath(); 
+            ctx.arc(fX + 7, fY - 7, 2, 0, Math.PI*2); 
+            ctx.fillStyle = '#fdfbf7'; 
+            ctx.fill();
+
+            // Punkt P zeichnen
+            ctx.beginPath(); 
+            ctx.arc(pX, pY, 6, 0, Math.PI*2); 
+            ctx.fillStyle = '#f43f5e'; 
+            ctx.fill();
+            ctx.fillStyle = '#fff'; 
+            ctx.font = 'bold 18px sans-serif'; 
+            ctx.fillText('P', pX - 25, pY + 5);
+
+            // Punkt F (Durchstoßpunkt) zeichnen
+            ctx.beginPath(); 
+            ctx.arc(fX, fY, 6, 0, Math.PI*2); 
+            ctx.fillStyle = '#60a5fa'; 
+            ctx.fill();
+            ctx.fillStyle = '#fff'; 
+            ctx.fillText('F', fX - 25, fY + 20);
+            
+            // Abstands-Label
+            ctx.fillStyle = '#fbbf24'; 
+            ctx.font = 'bold 20px sans-serif'; 
+            ctx.fillText('d = |PF|', pX + 15, (pY + fY)/2 + 5);
+        }
+
+        function initCanvas11() {
+            const canvas = document.getElementById('distLineCanvas');
+            const size = getRealCanvasSize(canvas);
+            if (!size) return;
+            const ctx = canvas.getContext('2d');
+            const displayWidth = size.w;
+            const displayHeight = size.h;
+            canvas.width = displayWidth * window.devicePixelRatio;
+            canvas.height = displayHeight * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            
+            const origin = { x: displayWidth / 2, y: displayHeight / 2 + 30 };
+            ctx.clearRect(0, 0, displayWidth, displayHeight);
+
+            ctx.beginPath(); ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 3;
+            ctx.moveTo(origin.x - 120, origin.y + 60); ctx.lineTo(origin.x + 120, origin.y - 60); ctx.stroke();
+            ctx.fillStyle = '#fde68a'; ctx.font = 'bold 18px sans-serif'; ctx.fillText('g', origin.x + 130, origin.y - 60);
+
+            ctx.beginPath();
+            ctx.moveTo(origin.x - 40, origin.y - 80); ctx.lineTo(origin.x + 60, origin.y - 120);
+            ctx.lineTo(origin.x + 40, origin.y + 80); ctx.lineTo(origin.x - 60, origin.y + 120);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(52, 211, 153, 0.2)'; ctx.fill();
+            ctx.strokeStyle = '#34d399'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = '#6ee7b7'; ctx.font = 'bold 18px sans-serif'; ctx.fillText('E_H', origin.x - 70, origin.y + 100);
+
+            const pX = origin.x - 10; const pY = origin.y - 50;
+            ctx.beginPath(); ctx.arc(pX, pY, 6, 0, Math.PI*2); ctx.fillStyle = '#f43f5e'; ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('P', pX - 15, pY - 10);
+
+            const fX = origin.x; const fY = origin.y;
+            ctx.beginPath(); ctx.arc(fX, fY, 6, 0, Math.PI*2); ctx.fillStyle = '#4ade80'; ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.fillText('F', fX + 10, fY + 20);
+
+            ctx.beginPath(); ctx.strokeStyle = '#fdfbf7'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
+            ctx.moveTo(pX, pY); ctx.lineTo(fX, fY); ctx.stroke(); ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('d', (pX+fX)/2 - 15, (pY+fY)/2 - 10);
+            
+            ctx.beginPath(); ctx.strokeStyle = '#fde68a'; ctx.lineWidth = 4;
+            ctx.moveTo(fX, fY); ctx.lineTo(fX + 60, fY - 30); ctx.stroke();
+            ctx.save(); ctx.translate(fX+60, fY-30); ctx.rotate(Math.atan2(-30, 60));
+            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-10,-5); ctx.lineTo(-10,5); ctx.fillStyle='#fde68a'; ctx.fill(); ctx.restore();
+            drawVecLabel(ctx, '', 'u', '', fX + 40, fY - 35, '#fde68a');
+        }
+
+        function initCanvas12() {
+            const canvas = document.getElementById('distSkewCanvas');
+            const size = getRealCanvasSize(canvas);
+            if (!size) return;
+            const ctx = canvas.getContext('2d');
+            const displayWidth = size.w;
+            const displayHeight = size.h;
+            canvas.width = displayWidth * window.devicePixelRatio;
+            canvas.height = displayHeight * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            
+            const origin = { x: displayWidth / 2, y: displayHeight / 2 + 50 };
+            ctx.clearRect(0, 0, displayWidth, displayHeight);
+
+            ctx.beginPath();
+            ctx.moveTo(origin.x - 120, origin.y + 40); ctx.lineTo(origin.x + 80, origin.y + 40);
+            ctx.lineTo(origin.x + 120, origin.y - 40); ctx.lineTo(origin.x - 80, origin.y - 40);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(251, 191, 36, 0.15)'; ctx.fill();
+            ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.fillStyle = '#fde68a'; ctx.font = 'bold 18px sans-serif'; ctx.fillText('E_H', origin.x - 100, origin.y + 30);
+
+            ctx.beginPath(); ctx.strokeStyle = '#fde68a'; ctx.lineWidth = 3;
+            ctx.moveTo(origin.x - 100, origin.y + 20); ctx.lineTo(origin.x + 100, origin.y - 20); ctx.stroke();
+            ctx.fillText('g', origin.x + 110, origin.y - 20);
+
+            const hOffset = -80; 
+            ctx.beginPath(); ctx.strokeStyle = '#34d399'; ctx.lineWidth = 3;
+            ctx.moveTo(origin.x - 80, origin.y + hOffset + 10); ctx.lineTo(origin.x + 80, origin.y + hOffset - 30); ctx.stroke();
+            ctx.fillStyle = '#6ee7b7'; ctx.font = 'bold 18px sans-serif'; ctx.fillText('h', origin.x + 90, origin.y + hOffset - 30);
+            
+            const pX = origin.x; const pY = origin.y + hOffset - 10;
+            ctx.beginPath(); ctx.arc(pX, pY, 6, 0, Math.PI*2); ctx.fillStyle = '#f43f5e'; ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('P_h', pX - 30, pY - 5);
+
+            const fX = pX; const fY = origin.y; 
+            ctx.beginPath(); ctx.arc(fX, fY, 6, 0, Math.PI*2); ctx.fillStyle = '#4ade80'; ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.fillText('F', fX + 10, fY + 15);
+
+            ctx.beginPath(); ctx.strokeStyle = '#fdfbf7'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
+            ctx.moveTo(pX, pY); ctx.lineTo(fX, fY); ctx.stroke(); ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 16px sans-serif';
+            ctx.fillText('d', pX - 15, (pY+fY)/2);
+        }
+
+        // --- Initiale Lade-Logik ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderNav();
+            renderContent();
+        });
+    </script>
+</body>
+</html>
